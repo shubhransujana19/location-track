@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
+import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -35,8 +36,9 @@ class _HomePageState extends State<HomePage> {
   String staffPhoto = '';
 
   late String staffCode =''; // Add staffCode parameter
-  late String password; // Add password parameter
+  late String password = ''; // Add password parameter
 
+  int _selectedIndex = 0;
 
 @override
 void initState() {
@@ -51,7 +53,7 @@ void didChangeDependencies() {
     Future.delayed(Duration.zero, () {
     final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     staffCode = args['staffCode'];
-    password = args['password'] ?? '';
+    password = args['password'];
       fetchStaffDetails();
     _startTimer();
   });
@@ -314,7 +316,7 @@ void _getDirections() async {
                   } );
                 },
               ),
-                             ListTile(
+                ListTile(
                 leading: const Icon(Icons.edit_document, color: Colors.blueAccent,),
                 title: const Text('Documents'),
                 onTap: () {
@@ -363,7 +365,49 @@ void _getDirections() async {
           ),
         ),
       ),
+      bottomNavigationBar: ConvexAppBar(
+        initialActiveIndex: _selectedIndex,
+        height: 50,
+        backgroundColor: const Color.fromARGB(185, 28, 84, 129),
+        style: TabStyle.flip,
+        items: const [
+          TabItem(icon: Icons.home_outlined, title: 'Home'),
+          TabItem(icon: Icons.person_outline, title: 'Profile'),
+          TabItem(icon: Icons.auto_graph_outlined, title: 'Records'),
+          TabItem(icon: Icons.settings_outlined, title: 'Settings')
+        ],
+        onTap: (int index) {
+          setState(() {
+            _selectedIndex = index; // Update the selected index
+          });
 
+          // Navigate to the corresponding page based on the selected index
+          switch (index) {
+            case 0:
+              Navigator.pushNamed(context, '/home');
+              break;
+            case 1:
+              Navigator.pushNamed(context, '/profile', 
+              arguments: {
+                'staffCode': staffCode,
+                'password': password,
+              });
+              break;
+            case 2:
+              Navigator.pushNamed(context, '/records',
+              arguments: {
+                'staffCode': staffCode,
+                'password': password,
+              });
+              break;
+            case 3:
+              Navigator.pushNamed(context, '/settings');
+              break;
+            default:
+              break;
+          }
+        },
+      ),
       
     );
   }

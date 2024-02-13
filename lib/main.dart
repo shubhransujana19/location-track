@@ -3,6 +3,7 @@ import 'package:location/BankPage.dart';
 import 'package:location/DocumentPage.dart';
 import 'package:location/HomePage.dart';
 import 'package:location/ProfilePage.dart';
+import 'package:location/RecordPage.dart';
 import 'package:location/SignInPage.dart';
 
 void main() {
@@ -23,6 +24,8 @@ class MyApp extends StatelessWidget {
         '/profile' :(context) => const ProfilePage(),
         '/bank' : (context) => const BankPage(),
         '/document' : (context) => const DocumentPage(),
+        '/records' : (context) => const RecordsPage(),
+
 
       }
     );
