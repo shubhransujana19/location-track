@@ -60,21 +60,15 @@ class _ProfilePageState extends State<ProfilePage> {
           });
         }
       } else {
-<<<<<<< HEAD
+        // setState(() {
+        //   staffName = 'Failed to load data: ${response.statusCode}';
+        // });
         throw Exception('Failed to load data: ${response.statusCode}');
       }
     } catch (error) {
-=======
-        setState(() {
-          staffName = 'Failed to load data: ${response.statusCode}';
-        });
-        throw Exception('Failed to load data: ${response.statusCode}');
-      }
-    } catch (error) {
-      setState(() {
-        staffName = 'Failed to load data: $error';
-      });
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
+      // setState(() {
+      //   staffName = 'Failed to load data: $error';
+      // });
       print('Error fetching data: $error');
     }
   }
@@ -84,11 +78,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       backgroundColor: Colors.grey[200], // Subtle background
       appBar: AppBar(
-<<<<<<< HEAD
-        backgroundColor: Color.fromARGB(255, 81, 126, 163), // Brand primary color
-=======
-        backgroundColor: Colors.blue, // Brand primary color
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
+        backgroundColor: Color.fromARGB(255, 62, 116, 160), // Brand primary color
         title: const Text(
           'Profile',
           style: TextStyle(
@@ -124,17 +114,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-<<<<<<< HEAD
-=======
-                    // Circle avatar with placeholder and network image
-// ... previous code
-
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
                     CircleAvatar(
                       radius: 50.0,
                       backgroundImage: staffPhoto.isNotEmpty
                           ? NetworkImage(staffPhoto)
-                          : NetworkImage('https://i.guim.co.uk/img/media/97fc02c0ed01d16b8090846535695cb1daa4d084/0_150_2000_1199/master/2000.jpg?width=465&dpr=1&s=none') // Placeholder image
+                          : NetworkImage('https://i.guim.co.uk/img/media/97fc02c0ed01d16b8090846535695cb1daa4d084/0_150_2000_1199/master/2000.jpg?width=465&dpr=1&s=none'), // Placeholder image
                     ),
                     const SizedBox(width: 20.0),
                     Column(
@@ -168,11 +152,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               const SizedBox(height: 30.0),
-<<<<<<< HEAD
-=======
 
               // Card for contact information with clear heading and border
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
               Card(
                 elevation: 2.0,
                 shape: RoundedRectangleBorder(
@@ -225,11 +206,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           const Icon(Icons.currency_rupee, color: Colors.blue),
                           const SizedBox(width: 10.0),
                           Text(
-<<<<<<< HEAD
                             'Salary: ₹$salary',
-=======
-                            'Salary: \₹$salary',
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
                             style: const TextStyle(
                               fontSize: 16.0,
                               color: Colors.black,

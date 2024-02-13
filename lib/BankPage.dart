@@ -55,23 +55,13 @@ class _BankPageState extends State<BankPage> {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Color.fromARGB(255, 93, 146, 189), // Change to your desired color
-          elevation: 0.0, // Remove default shadow
-          title: const Text(
-=======
-    return SafeArea(
-      child: Scaffold(
+      return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
           // Gradient background
-          backgroundColor: Colors.blue, // Change to your desired color
+          backgroundColor: const Color.fromARGB(255, 65, 120, 165), // Change to your desired color
           elevation: 0.0, // Remove default shadow
-          title: Text(
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
+          title: const Text(
             'My Bank Account',
             style: TextStyle(
               color: Colors.white,
@@ -80,11 +70,7 @@ class _BankPageState extends State<BankPage> {
             ),
           ),
           leading: IconButton(
-<<<<<<< HEAD
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-=======
-            icon: Icon(Icons.arrow_back, color: Colors.white),
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -92,59 +78,37 @@ class _BankPageState extends State<BankPage> {
           future: _bankDetailsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-<<<<<<< HEAD
               return const Center(child: CircularProgressIndicator());
-=======
-              return Center(child: CircularProgressIndicator());
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
             } else if (snapshot.hasError) {
               return Center(child: Text('Error: ${snapshot.error}'));
             } else {
               final bankDetails = snapshot.data!;
               return SingleChildScrollView(
-<<<<<<< HEAD
                 padding: const EdgeInsets.all(16.0),
-=======
-                padding: EdgeInsets.all(16.0),
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch cards
                   children: [
                     _buildDetailCard(
-<<<<<<< HEAD
-                      Color.fromARGB(255, 154, 108, 192), // Light blue background
-=======
-                      const Color.fromARGB(255, 208, 210, 211), // Light blue background
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
+                      const Color.fromARGB(255, 154, 108, 192), // Light blue background
                       TextStyle(
                         color: Colors.blue[800],
                         fontWeight: FontWeight.bold,
                       ),
-<<<<<<< HEAD
                       const TextStyle(fontSize: 18.0),
-=======
-                      TextStyle(fontSize: 18.0),
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
                       'Bank Name:',
                       bankDetails['bankName']!,
+                      'bankName',
                     ),
                     _buildDetailCard(
-<<<<<<< HEAD
-                      Color.fromARGB(255, 135, 204, 135), // Light green background
-=======
-                      const Color.fromARGB(255, 222, 224, 222), // Light green background
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
+                      const Color.fromARGB(255, 135, 204, 135), // Light green background
                       TextStyle(
                         color: Colors.green[800],
                         fontWeight: FontWeight.bold,
                       ),
-<<<<<<< HEAD
                       const TextStyle(fontSize: 18.0),
-=======
-                      TextStyle(fontSize: 18.0),
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
                       'IFSC Code:',
                       bankDetails['ifscCode']!,
+                      'ifscCode',
                     ),
                     _buildDetailCard(
                       const Color.fromARGB(255, 255, 183, 77), // Light orange background
@@ -152,13 +116,10 @@ class _BankPageState extends State<BankPage> {
                         color: Colors.orange[800],
                         fontWeight: FontWeight.bold,
                       ),
-<<<<<<< HEAD
                       const TextStyle(fontSize: 18.0),
-=======
-                      TextStyle(fontSize: 18.0),
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
                       'Account Number:',
                       bankDetails['accountNumber']!,
+                      'accountNumber',
                     ),
                     _buildDetailCard(
                       const Color.fromARGB(255, 255, 138, 128), // Light red background
@@ -166,13 +127,10 @@ class _BankPageState extends State<BankPage> {
                         color: Colors.red[800],
                         fontWeight: FontWeight.bold,
                       ),
-<<<<<<< HEAD
                       const TextStyle(fontSize: 18.0),
-=======
-                      TextStyle(fontSize: 18.0),
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
                       'Account Holder Name:',
                       bankDetails['accountHolderName']!,
+                      'accountHolderName',
                     ),
                     _buildDetailCard(
                       const Color.fromARGB(255, 144, 202, 249), // Light blue background
@@ -180,13 +138,10 @@ class _BankPageState extends State<BankPage> {
                         color: Colors.blue[800],
                         fontWeight: FontWeight.bold,
                       ),
-<<<<<<< HEAD
                       const TextStyle(fontSize: 18.0),
-=======
-                      TextStyle(fontSize: 18.0),
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
                       'PAN Card:',
                       bankDetails['panCard']!,
+                      'panCard',
                     ),
                     // Add more detail cards here
                   ],
@@ -195,13 +150,8 @@ class _BankPageState extends State<BankPage> {
             }
           },
         ),
-<<<<<<< HEAD
       );
     
-=======
-      ),
-    );
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
   }
 
   Widget _buildDetailCard(
@@ -210,37 +160,26 @@ class _BankPageState extends State<BankPage> {
     TextStyle valueStyle,
     String label,
     String value,
+    String s,
   ) {
     return Card(
       color: cardColor,
       child: Padding(
-<<<<<<< HEAD
         padding: const EdgeInsets.all(24.0),
-=======
-        padding: EdgeInsets.all(24.0),
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-<<<<<<< HEAD
                 const Icon(Icons.lock, color: Colors.grey),
-=======
-                Icon(Icons.lock, color: Colors.grey),
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
                 Text(
                   label,
                   style: labelStyle,
                 ),
               ],
             ),
-<<<<<<< HEAD
             const Divider(),
-=======
-            Divider(),
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -252,11 +191,7 @@ class _BankPageState extends State<BankPage> {
                 ),
                 if (_isSensitiveData(value)) ... {
                   IconButton(
-<<<<<<< HEAD
                     icon: const Icon(Icons.visibility_off),
-=======
-                    icon: Icon(Icons.visibility_off),
->>>>>>> c880ef517b4294e32aa86ffff82c47b2876c67ec
                     onPressed: () {
                       // Implement authentication and reveal full data securely
                     },

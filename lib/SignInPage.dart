@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class SignInPage extends StatefulWidget {
-  const SignInPage({Key? key}) : super(key: key);
+  const SignInPage({super.key});
 
   @override
   State<SignInPage> createState() => _SignInPageState();
@@ -30,8 +30,8 @@ Future<void> _login(BuildContext context) async {
   if (staffCode.isEmpty || password.isEmpty) {
     // Display an error message if staff code or password is empty
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Staff code and password cannot be empty'),
+      const SnackBar(
+        content: Text('Staff code and password cannot be empty'),
         backgroundColor: Colors.red,
       ),
     );
@@ -49,7 +49,7 @@ Future<void> _login(BuildContext context) async {
     },
   );
 
-  final Uri url = Uri.parse('http://192.168.1.133:3000/login');
+  final Uri url = Uri.parse('https://www.wmps.in/staff/gps/location.php');
   final Map<String, String> requestBody = {'staffCode': staffCode, 'password': password};
 
   try {
@@ -68,7 +68,14 @@ Future<void> _login(BuildContext context) async {
 
     if (responseData['success']) {
       // Login successful
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(
+        context, '/home',
+        arguments: {
+        'staffCode': staffCode,
+        'password': password,
+        },
+      
+      );
     } else {
       // Login failed, display error message
       ScaffoldMessenger.of(context).showSnackBar(
@@ -176,12 +183,11 @@ Future<void> _login(BuildContext context) async {
       child: ElevatedButton(
         onPressed: () => _login(context),
         style: ElevatedButton.styleFrom(
-          elevation: 5.0,
+          elevation: 5.0, backgroundColor: Colors.white,
           padding: const EdgeInsets.all(15.0),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30.0),
           ),
-          primary: Colors.white,
         ),
         child: const Text(
           'LOGIN',

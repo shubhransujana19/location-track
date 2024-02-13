@@ -58,7 +58,7 @@ class _DocumentPageState extends State<DocumentPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Documents'),
-        backgroundColor: Color.fromARGB(255, 83, 168, 211),
+        backgroundColor: const Color.fromARGB(255, 60, 121, 151),
       ),
       body: FutureBuilder<Map<String, String>>(
         future: _documentDetailsFuture,
