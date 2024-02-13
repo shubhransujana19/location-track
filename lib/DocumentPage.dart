@@ -57,7 +57,11 @@ class _DocumentPageState extends State<DocumentPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Documents'),
+        title: const Text('Documents',
+        style: TextStyle(
+          color: Colors.white,
+        ),
+        ),
         backgroundColor: const Color.fromARGB(255, 60, 121, 151),
       ),
       body: FutureBuilder<Map<String, String>>(

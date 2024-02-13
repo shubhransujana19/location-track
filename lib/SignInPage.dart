@@ -22,13 +22,10 @@ class _SignInPageState extends State<SignInPage> {
   }
 
 Future<void> _login(BuildContext context) async {
-  if (!mounted) return;
-
   final String staffCode = _staffCodeController.text.trim();
   final String password = _passwordController.text.trim();
 
   if (staffCode.isEmpty || password.isEmpty) {
-    // Display an error message if staff code or password is empty
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Staff code and password cannot be empty'),
@@ -38,7 +35,6 @@ Future<void> _login(BuildContext context) async {
     return;
   }
 
-  // Show loading indicator
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -59,47 +55,47 @@ Future<void> _login(BuildContext context) async {
       headers: {'Content-Type': 'application/json'},
     );
 
-    if (!mounted) return;
+    Navigator.pop(context); // Close loading indicator
 
-    // Close loading indicator
-    Navigator.pop(context);
-
-    final Map<String, dynamic> responseData = json.decode(response.body);
-
-    if (responseData['success']) {
-      // Login successful
-      Navigator.pushReplacementNamed(
-        context, '/home',
-        arguments: {
-        'staffCode': staffCode,
-        'password': password,
-        },
-      
-      );
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+      if (responseData.containsKey('success') && responseData['success']) {
+        Navigator.pushReplacementNamed(
+          context, '/home',
+          arguments: {'staffCode': staffCode, 'password': password},
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(responseData['message'] ?? 'Login failed'),
+            backgroundColor: const Color.fromARGB(164, 244, 67, 54),
+          ),
+        );
+      }
     } else {
-      // Login failed, display error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(responseData['message']),
-          backgroundColor: Colors.red,
+          content: Text('HTTP Error: ${response.statusCode}'),
+          backgroundColor: const Color.fromARGB(164, 244, 67, 54),
         ),
       );
     }
   } catch (error) {
-    // Handle error and show error message in UI
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Error during login: $error'),
-        backgroundColor: Colors.red,
+        backgroundColor: const Color.fromARGB(178, 212, 27, 14),
       ),
     );
+    print('Error during login: $error');
   }
 }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 82, 140, 248),
+      backgroundColor: const Color.fromARGB(50, 112, 172, 228),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -107,15 +103,12 @@ Future<void> _login(BuildContext context) async {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const SizedBox(height: 55),
-                const Text(
-                  'Sign In',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'OpenSans',
-                    fontSize: 30.0,
-                    fontWeight: FontWeight.bold,
-                  ),
+                const SizedBox(height: 25),
+                Padding(padding: const EdgeInsets.all(5.0),
+                  child: Image.asset(
+                  'assets/images/logo.png', 
+                  height: 100, 
+                ),
                 ),
                 const SizedBox(height: 55),
                 _buildTextField('Staff Code', _staffCodeController, Icons.person_outline),
@@ -152,7 +145,7 @@ Future<void> _login(BuildContext context) async {
         Container(
           alignment: Alignment.centerLeft,
           decoration: BoxDecoration(
-            color: const Color(0xFF6CA8F1),
+            color: const Color.fromARGB(167, 22, 65, 94),
             borderRadius: BorderRadius.circular(15.0),
             boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6.0, offset: Offset(0, 2))],
           ),
@@ -202,5 +195,6 @@ Future<void> _login(BuildContext context) async {
       ),
     );
   }
+
 }
 

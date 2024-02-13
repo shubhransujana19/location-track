@@ -139,13 +139,19 @@ class _ProfilePageState extends State<ProfilePage> {
                             color: Color.fromARGB(255, 117, 117, 117),
                           ),
                         ),
-                        Text(
+                      Container(
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.5), // Adjust width as needed
+                        child: Text(
                           location,
+                          textAlign: TextAlign.justify,
                           style: const TextStyle(
                             fontSize: 14.0,
                             color: Color.fromARGB(255, 117, 117, 117),
                           ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
                         ),
+                      ),
                       ],
                     ),
                   ],
