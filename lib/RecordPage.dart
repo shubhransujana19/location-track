@@ -26,13 +26,24 @@ class _RecordsPageState extends State<RecordsPage> {
   @override
   Widget build(BuildContext context) {
     return  Scaffold(
+            backgroundColor: Colors.grey[200], // Subtle background
             appBar: AppBar(
+              backgroundColor: Color.fromARGB(200, 20, 75, 121),
               title: const Text('All Track Records',
               style: TextStyle(
                 color: Colors.white,
               ),
               ),
-              backgroundColor: Color.fromARGB(200, 20, 75, 121),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  setState(() {
+                    _selectedIndex = 0; // Update the selected index to the Home page
+                  });
+                },
+              ),
+
             ),
             body: const Center(
                 child: Padding(
@@ -40,6 +51,7 @@ class _RecordsPageState extends State<RecordsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text('Select Date :')
                     ],
                   ),
                 )
@@ -77,10 +89,18 @@ class _RecordsPageState extends State<RecordsPage> {
                         });
                         break;
                       case 2:
-                        Navigator.pushNamed(context, '/records');
+                        Navigator.pushNamed(context, '/records',
+                          arguments: {
+                          'staffCode': staffCode,
+                          'password': password,
+                        });       
                         break;
                       case 3:
-                        Navigator.pushNamed(context, '/settings');
+                        Navigator.pushNamed(context, '/settings',
+                          arguments: {
+                          'staffCode': staffCode,
+                          'password': password,
+                        });       
                         break;
                       default:
                         break;

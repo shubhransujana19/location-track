@@ -87,46 +87,51 @@ void didChangeDependencies() {
     }
   }
 
-  Future<void> _getCurrentLocation() async {
-    try {
-      Position position = await Geolocator.getCurrentPosition();
-      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+Future<void> _getCurrentLocation() async {
+  try {
+    Position position = await Geolocator.getCurrentPosition();
+    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
 
-      if (placemarks.isNotEmpty) {
-        Placemark placemark = placemarks.first;
-        String street = placemark.thoroughfare ?? placemark.street ?? "Unnamed Road";
-        String city = placemark.locality ?? placemark.subLocality ?? placemark.administrativeArea ?? "Unknown";
-        String country = placemark.country ?? "Unknown";
+    if (placemarks.isNotEmpty) {
+      Placemark placemark = placemarks.first;
+      String street = placemark.thoroughfare ?? placemark.street ?? "Unnamed Road";
+      String city = placemark.locality ?? placemark.subLocality ?? placemark.administrativeArea ?? "Unknown";
+      String country = placemark.country ?? "Unknown";
 
-        setState(() {
+      setState(() {
+        // Set the origin to the user's current location only if it hasn't been set before
+        if (origin.latitude == 0.0 && origin.longitude == 0.0) {
           origin = LatLng(position.latitude, position.longitude);
-          destination = origin;
-          currentAddress = '$street, $city, $country';
-        });
+        }
+        destination = LatLng(position.latitude, position.longitude); // Update the destination
+        currentAddress = '$street, $city, $country';
+      });
 
-        _getDirections();
-        _moveToCurrentLocation();
-      } else {
-        setState(() {
-          origin = LatLng(position.latitude, position.longitude);
-          destination = origin;
-          currentAddress = "Unknown";
-        });
+      _getDirections(); // Create the polyline based on the updated destination
+      _moveToCurrentLocation();
+    } else {
+      setState(() {
+        // If placemarks are empty, set a default origin and destination
+        origin = LatLng(position.latitude, position.longitude);
+        destination = origin;
+        currentAddress = "Unknown";
+      });
 
-        _getDirections();
-        _moveToCurrentLocation();
-      }
-    } catch (error) {
-      if (kDebugMode) {
-        print('Error getting current location: $error');
-      }
-      if (!_isDisposed) { // Check if still mounted before updating state
-         setState(() {
-           currentAddress = "Error fetching location";
+      _getDirections();
+      _moveToCurrentLocation();
+    }
+  } catch (error) {
+    if (kDebugMode) {
+      print('Error getting current location: $error');
+    }
+    if (!_isDisposed) { // Check if still mounted before updating state
+      setState(() {
+        currentAddress = "Error fetching location";
       });
     } 
-   }
   }
+}
+
 
   void _moveToCurrentLocation() {
     mapController.animateCamera(
