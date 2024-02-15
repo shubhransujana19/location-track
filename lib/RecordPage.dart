@@ -1,14 +1,14 @@
 import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'package:flutter/material.dart';
 
-class RecordsPage extends StatefulWidget {
-  const RecordsPage({super.key});
+class RecordPage extends StatefulWidget {
+  const RecordPage({super.key});
 
   @override
-  State<RecordsPage> createState() => _RecordsPageState();
+  State<RecordPage> createState() => _RecordPageState();
 }
 
-class _RecordsPageState extends State<RecordsPage> {
+class _RecordPageState extends State<RecordPage> {
   int _selectedIndex = 2;
 
   String staffCode = '';

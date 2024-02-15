@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -11,7 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({Key? key}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -21,57 +22,64 @@ class _HomePageState extends State<HomePage> {
   late GoogleMapController mapController;
   Set<Marker> markers = {};
   Polyline polyline = const Polyline(polylineId: PolylineId('directions'), points: []);
-  bool isLoading = true;
   String currentAddress = "";
-
-  LatLng origin = const LatLng(0.0, 0.0); // Default to (0, 0)
+  LatLng origin = const LatLng(0.0, 0.0);
   LatLng destination = const LatLng(0.0, 0.0);
-
-  late Timer _timer;
+  bool isLocationTrackingEnabled = false;
+  Timer? _timer;
   bool _isDisposed = false;
-
+  late String staffCode = '';
+  late String password = '';
   String staffName = 'Loading...';
   String designation = '';
   String photoPath = '';
   String staffPhoto = '';
 
-  late String staffCode =''; // Add staffCode parameter
-  late String password = ''; // Add password parameter
+  @override
+  void initState() {
+    super.initState();
+    _requestLocationPermission();
+  }
 
-  int _selectedIndex = 0;
-
-@override
-void initState() {
-  super.initState();
-  
-  _requestLocationPermission();
-}
-
-@override
-void didChangeDependencies() {
-  super.didChangeDependencies();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     Future.delayed(Duration.zero, () {
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    staffCode = args['staffCode'];
-    password = args['password'];
+      final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      staffCode = args['staffCode'];
+      password = args['password'];
       fetchStaffDetails();
-    _startTimer();
-  });
-}
+      _startTimer();
+    });
+  }
 
   @override
   void dispose() {
-    _timer.cancel(); // Cancel the timer to prevent memory leaks
-    _isDisposed = true; // Mark as disposed
+    _timer?.cancel();
+    _isDisposed = true;
     super.dispose();
   }
 
-  // Method to start the timer
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (!_isDisposed) {
-      _getCurrentLocation(); // Call _getCurrentLocation() every 30 seconds
+        _getCurrentLocation();
       }
+    });
+  }
+
+  void _startLocationTracking() {
+    _startTimer();
+    setState(() {
+      isLocationTrackingEnabled = true;
+    });
+  }
+
+  void _stopLocationTracking() {
+    _timer?.cancel();
+    _timer = null;
+    setState(() {
+      isLocationTrackingEnabled = false;
     });
   }
 
@@ -84,7 +92,33 @@ void didChangeDependencies() {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Location permission denied')),
       );
+      _showPermissionRequestDialog();
     }
+  }
+
+  void _showPermissionRequestDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Location Permission Required"),
+          content: const Text("This app requires location permission to function."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _getCurrentLocation();
+              },
+              child: const Text("Grant"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
 Future<void> _getCurrentLocation() async {
@@ -99,36 +133,34 @@ Future<void> _getCurrentLocation() async {
       String country = placemark.country ?? "Unknown";
 
       setState(() {
-        // Set the origin to the user's current location only if it hasn't been set before
         if (origin.latitude == 0.0 && origin.longitude == 0.0) {
           origin = LatLng(position.latitude, position.longitude);
         }
-        destination = LatLng(position.latitude, position.longitude); // Update the destination
+        destination = LatLng(position.latitude, position.longitude);
         currentAddress = '$street, $city, $country';
       });
 
-      _getDirections(); // Create the polyline based on the updated destination
+      _getDirections(); // Call _getDirections() to draw polyline
       _moveToCurrentLocation();
     } else {
       setState(() {
-        // If placemarks are empty, set a default origin and destination
         origin = LatLng(position.latitude, position.longitude);
         destination = origin;
         currentAddress = "Unknown";
       });
 
-      _getDirections();
+      _getDirections(); // Call _getDirections() to draw polyline
       _moveToCurrentLocation();
     }
   } catch (error) {
     if (kDebugMode) {
       print('Error getting current location: $error');
     }
-    if (!_isDisposed) { // Check if still mounted before updating state
+    if (!_isDisposed) {
       setState(() {
         currentAddress = "Error fetching location";
       });
-    } 
+    }
   }
 }
 
@@ -136,13 +168,13 @@ Future<void> _getCurrentLocation() async {
   void _moveToCurrentLocation() {
     mapController.animateCamera(
       CameraUpdate.newCameraPosition(
-        CameraPosition(target: origin, zoom: 14),
+        CameraPosition(target: origin, zoom: 15),
       ),
     );
   }
 
   Future<List<LatLng>> getDirections() async {
-    const String apiKey = 'AIzaSyAFzlw87Pf_trlsQjEjUu-4eP9G7WpcLDc'; 
+    const String apiKey = 'AIzaSyAFzlw87Pf_trlsQjEjUu-4eP9G7WpcLDc';
     final String url =
         'https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=$apiKey';
 
@@ -170,68 +202,66 @@ Future<void> _getCurrentLocation() async {
 
     return [];
   }
+    List<List<LatLng>> routeTracks = [];
 
-void _getDirections() async {
-  try {
-    final directions = await getDirections(); // Ensure async execution
-    if (directions.isNotEmpty) {
-      setState(() {
-        polyline = Polyline(
-          polylineId: const PolylineId('directions'),
-          color: Colors.blue,
-          points: directions,
-        );
-        markers.clear(); // Clear previous markers
-        markers.add(Marker(markerId: const MarkerId('origin'), position: origin));
-        markers.add(Marker(markerId: const MarkerId('destination'), position: destination));
-        isLoading = false;
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No directions found')),
-      );
+    Future<void> _getDirections() async {
+      try {
+        final directions = await getDirections();
+        if (directions.isNotEmpty) {
+          setState(() {
+            routeTracks.add(directions); // Save directions in list
+            polyline = Polyline(
+              polylineId: const PolylineId('directions'),
+              color: Colors.blue,
+              points: routeTracks.expand((track) => track).toList(), // Flatten list of tracks
+            );
+            markers.clear();
+            markers.add(Marker(markerId: const MarkerId('origin'), position: origin));
+            markers.add(Marker(markerId: const MarkerId('destination'), position: destination));
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No directions found')),
+          );
+        }
+      } catch (error) {
+        print('Error fetching directions: $error');
+      }
     }
-  } catch (error) {
-    print('Error fetching directions: $error');
-  }
-}
 
   Future<void> fetchStaffDetails() async {
-  try {
-    final response = await http.post(
-      Uri.parse('https://www.wmps.in/staff/gps/location.php'),
-      body: jsonEncode({'staffCode': staffCode, 'password': password}),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('https://www.wmps.in/staff/gps/location.php'),
+        body: jsonEncode({'staffCode': staffCode, 'password': password}),
+      );
 
-    if (response.statusCode == 200) {
-      final responseData = jsonDecode(response.body);
-      print('Response Data: $responseData');
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        print('Response Data: $responseData');
 
-      if (responseData != null && responseData['success']) {
-        setState(() {
-          staffName = responseData['staffDetails']['staff_name'] ?? 'Unknown';
-          designation = responseData['staffDetails']['department'] ?? '';
-          photoPath = responseData['staffDetails']['photo'];
-          staffPhoto = 'https://www.wmps.in/staff/document/photo/$photoPath';
-        });
+        if (responseData != null && responseData['success']) {
+          setState(() {
+            staffName = responseData['staffDetails']['staff_name'] ?? 'Unknown';
+            designation = responseData['staffDetails']['department'] ?? '';
+            photoPath = responseData['staffDetails']['photo'];
+            staffPhoto = 'https://www.wmps.in/staff/document/photo/$photoPath';
+          });
+        } else {
+          setState(() {
+            staffName = 'Failed to load data: ${responseData['message']}';
+          });
+        }
       } else {
         setState(() {
-          staffName = 'Failed to load data: ${responseData['message']}';
+          staffName = 'Failed to load data: ${response.statusCode}';
         });
+        throw Exception('Failed to load data: ${response.statusCode}');
       }
-    } else {
-      setState(() {
-        staffName = 'Failed to load data: ${response.statusCode}';
-      });
-      throw Exception('Failed to load data: ${response.statusCode}');
+    } catch (error) {
+      print('Error fetching data: $error');
     }
-  } catch (error) {
-    // setState(() {
-    //   staffName = 'Failed to load data: $error';
-    // });
-    print('Error fetching data: $error');
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -240,8 +270,8 @@ void _getDirections() async {
       appBar: AppBar(
         title: const Text('Map Directions'),
         actions: const <Widget>[
-          Icon(Icons.notification_add, color: Colors.blueAccent,),
-          SizedBox(width: 9,)
+          Icon(Icons.notification_add, color: Colors.blueAccent),
+          SizedBox(width: 9),
         ],
       ),
       body: SafeArea(
@@ -251,6 +281,7 @@ void _getDirections() async {
             children: <Widget>[
               _googleMapView(),
               _currentAddress(),
+              _trackButton(),
             ],
           ),
         ),
@@ -267,14 +298,17 @@ void _getDirections() async {
                 ),
                 child: Stack(
                   children: [
-                     Positioned(
+                    Positioned(
                       left: 10.0,
                       top: 16.0,
                       bottom: 16.0,
                       child: Row(
                         children: [
-                           CircleAvatar(
-                            backgroundImage: staffPhoto.isNotEmpty ? NetworkImage(staffPhoto) : const NetworkImage('https://i.guim.co.uk/img/media/97fc02c0ed01d16b8090846535695cb1daa4d084/0_150_2000_1199/master/2000.jpg?width=465&dpr=1&s=none'),
+                          CircleAvatar(
+                            backgroundImage: staffPhoto.isNotEmpty
+                                ? NetworkImage(staffPhoto)
+                                : const NetworkImage(
+                                    'https://i.guim.co.uk/img/media/97fc02c0ed01d16b8090846535695cb1daa4d084/0_150_2000_1199/master/2000.jpg?width=465&dpr=1&s=none'),
                             foregroundColor: Colors.green,
                             radius: 40.0,
                           ),
@@ -282,7 +316,6 @@ void _getDirections() async {
                           Text(staffName),
                         ],
                       ),
-                      
                     ),
                     Positioned(
                       top: 8.0,
@@ -295,56 +328,58 @@ void _getDirections() async {
                   ],
                 ),
               ),
-               ListTile(
-                leading: const Icon(Icons.person, color: Colors.blueAccent,),
+              ListTile(
+                leading: const Icon(Icons.person, color: Colors.blueAccent),
                 title: const Text('Profile'),
                 onTap: () {
                   Navigator.pushNamed(
-                    context, '/profile',
-                   arguments: {
+                    context,
+                    '/profile',
+                    arguments: {
                       'staffCode': staffCode,
                       'password': password,
-
-                  } );
+                    },
+                  );
                 },
               ),
-               ListTile(
-                leading: const Icon(Icons.account_balance, color: Colors.blueAccent,),
+              ListTile(
+                leading: const Icon(Icons.account_balance, color: Colors.blueAccent),
                 title: const Text('Bank Details'),
                 onTap: () {
                   Navigator.pushNamed(
-                    context, '/bank',
-                   arguments: {
+                    context,
+                    '/bank',
+                    arguments: {
                       'staffCode': staffCode,
                       'password': password,
-
-                  } );
+                    },
+                  );
                 },
               ),
-                ListTile(
-                leading: const Icon(Icons.edit_document, color: Colors.blueAccent,),
+              ListTile(
+                leading: const Icon(Icons.edit_document, color: Colors.blueAccent),
                 title: const Text('Documents'),
                 onTap: () {
                   Navigator.pushNamed(
-                    context, '/document',
-                   arguments: {
+                    context,
+                    '/document',
+                    arguments: {
                       'staffCode': staffCode,
                       'password': password,
-
-                  } );
+                    },
+                  );
                 },
               ),
-
               const ListTile(
-                leading: Icon(Icons.contact_support, color: Colors.blueAccent,),
+                leading: Icon(Icons.contact_support, color: Colors.blueAccent),
                 title: Text('Contact Us'),
               ),
               const ListTile(
-                leading: Icon(Icons.settings, color: Colors.blueAccent,),
+                leading: Icon(Icons.settings, color: Colors.blueAccent),
                 title: Text('Settings'),
               ),
               const ListTile(
-                leading: Icon(Icons.share, color: Colors.blueAccent,),
+                leading: Icon(Icons.share, color: Colors.blueAccent),
                 title: Text('Share'),
               ),
               Padding(
@@ -371,7 +406,7 @@ void _getDirections() async {
         ),
       ),
       bottomNavigationBar: ConvexAppBar(
-        initialActiveIndex: _selectedIndex,
+        initialActiveIndex: 0,
         height: 50,
         backgroundColor: const Color.fromARGB(185, 28, 84, 129),
         style: TabStyle.flip,
@@ -382,25 +417,19 @@ void _getDirections() async {
           TabItem(icon: Icons.settings_outlined, title: 'Settings')
         ],
         onTap: (int index) {
-          setState(() {
-            _selectedIndex = index; // Update the selected index
-          });
-
           // Navigate to the corresponding page based on the selected index
           switch (index) {
             case 0:
               Navigator.pushNamed(context, '/home');
               break;
             case 1:
-              Navigator.pushNamed(context, '/profile', 
-              arguments: {
+              Navigator.pushNamed(context, '/profile', arguments: {
                 'staffCode': staffCode,
                 'password': password,
               });
               break;
             case 2:
-              Navigator.pushNamed(context, '/records',
-              arguments: {
+              Navigator.pushNamed(context, '/records', arguments: {
                 'staffCode': staffCode,
                 'password': password,
               });
@@ -413,7 +442,6 @@ void _getDirections() async {
           }
         },
       ),
-      
     );
   }
 
@@ -422,15 +450,14 @@ void _getDirections() async {
       elevation: 4.0,
       child: SizedBox(
         width: double.infinity,
-        height: 500,
+        height: 400,
         child: GoogleMap(
-          initialCameraPosition: CameraPosition(target: origin, zoom: 14),
+          initialCameraPosition: CameraPosition(target: origin, zoom: 15),
           onMapCreated: (controller) => mapController = controller,
           markers: markers,
           mapType: MapType.normal,
           polylines: {polyline},
           zoomControlsEnabled: true,
-          
         ),
       ),
     );
@@ -442,12 +469,47 @@ void _getDirections() async {
       child: SizedBox(
         width: double.infinity,
         height: 50,
-         child: Text(currentAddress.isEmpty ? "Fetching address..." : "Current Address: $currentAddress",
-            textAlign: TextAlign.center,         
-            style: const TextStyle(
-            fontSize: 15,
-            color: Colors.blue
+        child: Text(
+          currentAddress.isEmpty ? "Fetching address..." : "Current Address: $currentAddress",
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 15, color: Colors.blue),
+        ),
+      ),
+    );
+  }
+
+  Widget _trackButton() {
+    return Padding(
+      padding: EdgeInsets.all(16.0),
+      child: ElevatedButton(
+        onPressed: () async {
+          final service = FlutterBackgroundService();
+          bool isRunning = await service.isRunning();
+          if (isRunning) {
+            service.invoke('stopTracking');
+          } else {
+            service.startService();
+          }
+          if (!isRunning) {
+            _startLocationTracking();
+          } else {
+            _stopLocationTracking();
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          primary: isLocationTrackingEnabled ? Colors.red : Colors.lightGreen[700],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(isLocationTrackingEnabled ? Icons.stop : Icons.play_arrow),
+            const SizedBox(width: 5),
+            Text(isLocationTrackingEnabled ? 'Stop Tracking' : 'Start Tracking', style: const TextStyle(fontSize: 20.0)),
+          ],
         ),
       ),
     );
