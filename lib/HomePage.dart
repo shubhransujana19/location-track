@@ -34,6 +34,7 @@ class _HomePageState extends State<HomePage> {
   String designation = '';
   String photoPath = '';
   String staffPhoto = '';
+  List<LatLng> route = []; // Store the user's location history
 
   @override
   void initState() {
@@ -61,19 +62,21 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 15), (timer) {
       if (!_isDisposed) {
         _getCurrentLocation();
       }
     });
   }
 
-  void _startLocationTracking() {
+void _startLocationTracking() {
+  if (_timer == null || !_timer!.isActive) {
     _startTimer();
     setState(() {
       isLocationTrackingEnabled = true;
     });
   }
+}
 
   void _stopLocationTracking() {
     _timer?.cancel();
@@ -121,113 +124,89 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-Future<void> _getCurrentLocation() async {
-  try {
-    Position position = await Geolocator.getCurrentPosition();
-    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+  void _getCurrentLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
 
-    if (placemarks.isNotEmpty) {
-      Placemark placemark = placemarks.first;
-      String street = placemark.thoroughfare ?? placemark.street ?? "Unnamed Road";
-      String city = placemark.locality ?? placemark.subLocality ?? placemark.administrativeArea ?? "Unknown";
-      String country = placemark.country ?? "Unknown";
+      if (placemarks.isNotEmpty) {
+        Placemark placemark = placemarks.first;
+        String street = placemark.thoroughfare ?? placemark.street ?? "Unnamed Road";
+        String city = placemark.locality ?? placemark.subLocality ?? placemark.administrativeArea ?? "Unknown";
+        String country = placemark.country ?? "Unknown";
 
-      setState(() {
-        if (origin.latitude == 0.0 && origin.longitude == 0.0) {
+        setState(() {
+          if (origin.latitude == 0.0 && origin.longitude == 0.0) {
+            origin = LatLng(position.latitude, position.longitude);
+          }
+          destination = LatLng(position.latitude, position.longitude);
+          currentAddress = '$street, $city, $country';
+
+          route.add(LatLng(position.latitude, position.longitude)); // Add current location to the route
+        });
+
+        _moveToCurrentLocation();
+        _updatePolyline(); // Draw polyline with updated route
+
+        // Add marker for the current location
+        addMarker(position.latitude, position.longitude);
+      } else {
+        setState(() {
           origin = LatLng(position.latitude, position.longitude);
-        }
-        destination = LatLng(position.latitude, position.longitude);
-        currentAddress = '$street, $city, $country';
-      });
+          destination = origin;
+          currentAddress = "Unknown";
+        });
 
-      _getDirections(); // Call _getDirections() to draw polyline
-      _moveToCurrentLocation();
-    } else {
-      setState(() {
-        origin = LatLng(position.latitude, position.longitude);
-        destination = origin;
-        currentAddress = "Unknown";
-      });
-
-      _getDirections(); // Call _getDirections() to draw polyline
-      _moveToCurrentLocation();
-    }
-  } catch (error) {
-    if (kDebugMode) {
-      print('Error getting current location: $error');
-    }
-    if (!_isDisposed) {
-      setState(() {
-        currentAddress = "Error fetching location";
-      });
+        _moveToCurrentLocation();
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('Error getting current location: $error');
+      }
+      if (!_isDisposed) {
+        setState(() {
+          currentAddress = "Error fetching location";
+        });
+      }
     }
   }
-}
 
+
+  void _updatePolyline() {
+    setState(() {
+      polyline = Polyline(
+        polylineId: const PolylineId('route'),
+        color: Colors.blue,
+        points: List<LatLng>.from(route),
+      );
+    });
+  }
 
   void _moveToCurrentLocation() {
     mapController.animateCamera(
       CameraUpdate.newCameraPosition(
-        CameraPosition(target: origin, zoom: 15),
+        CameraPosition(target: destination, zoom: 15),
       ),
     );
   }
 
-  Future<List<LatLng>> getDirections() async {
-    const String apiKey = 'AIzaSyAFzlw87Pf_trlsQjEjUu-4eP9G7WpcLDc';
-    final String url =
-        'https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=$apiKey';
+void addMarker(double latitude, double longitude) {
+  // Clear existing markers
+  markers.clear();
 
-    try {
-      final response = await http.get(Uri.parse(url));
+  setState(() {
+    markers.add(
+      Marker(
+        markerId: MarkerId('current_location'), // Use a fixed marker ID for the current location
+        position: LatLng(latitude, longitude), // Provide the position of the marker
+        // You can customize the marker icon if needed
+        icon: BitmapDescriptor.defaultMarker,
+      ),
+    );
+  });
+}
 
-      if (response.statusCode == 200) {
-        final responseJson = jsonDecode(response.body);
-        final routes = responseJson['routes'] as List;
 
-        if (routes.isNotEmpty) {
-          final legs = routes.first['legs'] as List;
-
-          if (legs.isNotEmpty) {
-            final steps = legs.first['steps'] as List;
-            return steps.map((step) => LatLng(step['start_location']['lat'], step['start_location']['lng'])).toList();
-          }
-        }
-      }
-    } catch (error) {
-      if (kDebugMode) {
-        print('Error fetching directions: $error');
-      }
-    }
-
-    return [];
-  }
-    List<List<LatLng>> routeTracks = [];
-
-    Future<void> _getDirections() async {
-      try {
-        final directions = await getDirections();
-        if (directions.isNotEmpty) {
-          setState(() {
-            routeTracks.add(directions); // Save directions in list
-            polyline = Polyline(
-              polylineId: const PolylineId('directions'),
-              color: Colors.blue,
-              points: routeTracks.expand((track) => track).toList(), // Flatten list of tracks
-            );
-            markers.clear();
-            markers.add(Marker(markerId: const MarkerId('origin'), position: origin));
-            markers.add(Marker(markerId: const MarkerId('destination'), position: destination));
-          });
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No directions found')),
-          );
-        }
-      } catch (error) {
-        print('Error fetching directions: $error');
-      }
-    }
 
   Future<void> fetchStaffDetails() async {
     try {
@@ -445,7 +424,7 @@ Future<void> _getCurrentLocation() async {
     );
   }
 
-  Widget _googleMapView() {
+Widget _googleMapView() {
     return Card(
       elevation: 4.0,
       child: SizedBox(
@@ -454,9 +433,9 @@ Future<void> _getCurrentLocation() async {
         child: GoogleMap(
           initialCameraPosition: CameraPosition(target: origin, zoom: 15),
           onMapCreated: (controller) => mapController = controller,
-          markers: markers,
+          markers: markers, // Use the markers set here
           mapType: MapType.normal,
-          polylines: {polyline},
+          polylines: {polyline}, // Add the polyline here
           zoomControlsEnabled: true,
         ),
       ),
@@ -477,7 +456,7 @@ Future<void> _getCurrentLocation() async {
       ),
     );
   }
-
+  
   Widget _trackButton() {
     return Padding(
       padding: EdgeInsets.all(16.0),

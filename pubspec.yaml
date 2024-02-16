@@ -42,7 +42,6 @@ dependencies:
   geocoding: ^2.1.1
   convex_bottom_bar: ^3.2.0
   flutter_background_service: ^5.0.5
-  flutter_background_service_android: ^6.2.2
   shared_preferences: ^2.2.2
   
 dev_dependencies:
@@ -55,7 +54,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^2.0.0
-
+  flutter_background_service_android: ^6.2.2
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

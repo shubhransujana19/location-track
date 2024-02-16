@@ -92,7 +92,9 @@ class _ProfilePageState extends State<ProfilePage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            Navigator.of(context).pop();
+            // Pop all routes until reaching the home page
+          Navigator.of(context).popUntil(ModalRoute.withName('/home'));
+            // Navigator.of(context).pop();
             setState(() {
               _selectedIndex = 0; // Update the selected index to the Home page
             });
@@ -260,7 +262,7 @@ class _ProfilePageState extends State<ProfilePage> {
               arguments: {
                 'staffCode': staffCode,
                 'password': password,
-             });
+            });
               break;
             case 1:
               Navigator.pushNamed(context, '/profile', 
@@ -283,6 +285,7 @@ class _ProfilePageState extends State<ProfilePage> {
               break;
           }
         },
+
       ),
 
     );

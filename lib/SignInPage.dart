@@ -2,9 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignInPage extends StatefulWidget {
-  const SignInPage({super.key});
+  const SignInPage({Key? key}) : super(key: key);
 
   @override
   State<SignInPage> createState() => _SignInPageState();
@@ -15,82 +16,106 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordHidden = true;
 
+  @override
+  void initState() {
+    super.initState();
+    // Check if user credentials are stored locally
+    _checkSavedCredentials();
+  }
+
   void _togglePasswordVisibility() {
     setState(() {
       _isPasswordHidden = !_isPasswordHidden;
     });
   }
 
-Future<void> _login(BuildContext context) async {
-  final String staffCode = _staffCodeController.text.trim();
-  final String password = _passwordController.text.trim();
+  Future<void> _checkSavedCredentials() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? storedStaffCode = prefs.getString('staffCode');
+    final String? storedPassword = prefs.getString('password');
 
-  if (staffCode.isEmpty || password.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Staff code and password cannot be empty'),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
+    if (storedStaffCode != null && storedPassword != null) {
+      // Automatically log in with stored credentials
+      _staffCodeController.text = storedStaffCode;
+      _passwordController.text = storedPassword;
+      _login(context);
+    }
   }
 
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext context) {
-      return const Center(
-        child: CircularProgressIndicator(),
+  Future<void> _login(BuildContext context) async {
+    final String staffCode = _staffCodeController.text.trim();
+    final String password = _passwordController.text.trim();
+
+    if (staffCode.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Staff code and password cannot be empty'),
+          backgroundColor: Colors.red,
+        ),
       );
-    },
-  );
+      return;
+    }
 
-  final Uri url = Uri.parse('https://www.wmps.in/staff/gps/location.php');
-  final Map<String, String> requestBody = {'staffCode': staffCode, 'password': password};
-
-  try {
-    final http.Response response = await http.post(
-      url,
-      body: jsonEncode(requestBody),
-      headers: {'Content-Type': 'application/json'},
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
     );
 
-    Navigator.pop(context); // Close loading indicator
+    final Uri url = Uri.parse('https://www.wmps.in/staff/gps/location.php');
+    final Map<String, String> requestBody = {'staffCode': staffCode, 'password': password};
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      if (responseData.containsKey('success') && responseData['success']) {
-        Navigator.pushReplacementNamed(
-          context, '/home',
-          arguments: {'staffCode': staffCode, 'password': password},
-        );
+    try {
+      final http.Response response = await http.post(
+        url,
+        body: jsonEncode(requestBody),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      Navigator.pop(context); // Close loading indicator
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        if (responseData.containsKey('success') && responseData['success']) {
+          // Store credentials locally
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          prefs.setString('staffCode', staffCode);
+          prefs.setString('password', password);
+
+          Navigator.pushReplacementNamed(
+            context, '/home',
+            arguments: {'staffCode': staffCode, 'password': password},
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(responseData['message'] ?? 'Login failed'),
+              backgroundColor: const Color.fromARGB(164, 244, 67, 54),
+            ),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(responseData['message'] ?? 'Login failed'),
+            content: Text('HTTP Error: ${response.statusCode}'),
             backgroundColor: const Color.fromARGB(164, 244, 67, 54),
           ),
         );
       }
-    } else {
+    } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('HTTP Error: ${response.statusCode}'),
-          backgroundColor: const Color.fromARGB(164, 244, 67, 54),
+          content: Text('Error during login: $error'),
+          backgroundColor: const Color.fromARGB(178, 212, 27, 14),
         ),
       );
+      print('Error during login: $error');
     }
-  } catch (error) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error during login: $error'),
-        backgroundColor: const Color.fromARGB(178, 212, 27, 14),
-      ),
-    );
-    print('Error during login: $error');
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -104,11 +129,12 @@ Future<void> _login(BuildContext context) async {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 25),
-                Padding(padding: const EdgeInsets.all(5.0),
+                Padding(
+                  padding: const EdgeInsets.all(5.0),
                   child: Image.asset(
-                  'assets/images/logo.png', 
-                  height: 100, 
-                ),
+                    'assets/images/logo.png',
+                    height: 100,
+                  ),
                 ),
                 const SizedBox(height: 55),
                 _buildTextField('Staff Code', _staffCodeController, Icons.person_outline),
@@ -158,7 +184,7 @@ Future<void> _login(BuildContext context) async {
               border: InputBorder.none,
               contentPadding: const EdgeInsets.only(top: 14.0),
               prefixIcon: Icon(icon, color: Colors.white),
-              hintText: 'Enter your $labelText',
+              hintText: ' $labelText',
               hintStyle: const TextStyle(color: Colors.white54),
               suffixIcon: suffixIcon,
             ),
@@ -195,6 +221,4 @@ Future<void> _login(BuildContext context) async {
       ),
     );
   }
-
 }
-
