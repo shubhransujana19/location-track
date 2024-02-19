@@ -32,6 +32,8 @@ class _ProfilePageState extends State<ProfilePage> {
     staffCode = args['staffCode'] ?? '';
     password = args['password'] ?? '';
     fetchStaffDetails();
+
+    _selectedIndex = 1;
   }
 
   // Fetches staff details from API
@@ -95,9 +97,9 @@ class _ProfilePageState extends State<ProfilePage> {
             // Pop all routes until reaching the home page
           Navigator.of(context).popUntil(ModalRoute.withName('/home'));
             // Navigator.of(context).pop();
-            setState(() {
-              _selectedIndex = 0; // Update the selected index to the Home page
-            });
+            // setState(() {
+            //   _selectedIndex = 0; // Update the selected index to the Home page
+            // });
           },
         ),
       ),

@@ -39,7 +39,6 @@ class MyApp extends StatelessWidget {
         '/bank' : (context) => const BankPage(),
         '/document' : (context) => const DocumentPage(),
         '/records' : (context) => const RecordPage(),
-
       }
     );
   }

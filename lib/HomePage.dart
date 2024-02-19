@@ -10,6 +10,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'package:convex_bottom_bar/convex_bottom_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -35,11 +36,15 @@ class _HomePageState extends State<HomePage> {
   String photoPath = '';
   String staffPhoto = '';
   List<LatLng> route = []; // Store the user's location history
-
+  int _selectedIndex = 0;
+  double _totalDistance = 0.0; 
   @override
   void initState() {
     super.initState();
-    _requestLocationPermission();
+    // _requestLocationPermission();
+    if (staffCode.isNotEmpty && password.isNotEmpty ) {
+       _startLocationTracking();
+    }   
   }
 
   @override
@@ -52,6 +57,7 @@ class _HomePageState extends State<HomePage> {
       fetchStaffDetails();
       _startTimer();
     });
+    _selectedIndex = 0;
   }
 
   @override
@@ -69,22 +75,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-void _startLocationTracking() {
-  if (_timer == null || !_timer!.isActive) {
-    _startTimer();
-    setState(() {
-      isLocationTrackingEnabled = true;
-    });
-  }
-}
-
-  void _stopLocationTracking() {
-    _timer?.cancel();
-    _timer = null;
-    setState(() {
-      isLocationTrackingEnabled = false;
-    });
-  }
 
   Future<void> _requestLocationPermission() async {
     final status = await Permission.location.request();
@@ -147,10 +137,19 @@ void _startLocationTracking() {
 
         _moveToCurrentLocation();
         _updatePolyline(); // Draw polyline with updated route
-
+        _calculateDistance(); // Calculate distance after updating route
         // Add marker for the current location
         addMarker(position.latitude, position.longitude);
-      } else {
+        // Convert route to the required format
+        List<Map<String, double>> routeData = route.map((latLng) => {
+          'latitude': latLng.latitude,
+          'longitude': latLng.longitude,
+        }).toList();
+
+        // Send tracking data to server
+        sendTrackingDataToServer(routeData, currentAddress, staffCode);
+        print(routeData);
+        } else {
         setState(() {
           origin = LatLng(position.latitude, position.longitude);
           destination = origin;
@@ -205,7 +204,23 @@ void addMarker(double latitude, double longitude) {
     );
   });
 }
-
+  void _calculateDistance() {
+  if (route.length > 1) {
+    double distance = 0.0;
+    for (int i = 1; i < route.length; i++) {
+      distance += Geolocator.distanceBetween(
+        route[i - 1].latitude,
+        route[i - 1].longitude,
+        route[i].latitude,
+        route[i].longitude,
+      );
+    }
+    // Convert distance from meters to kilometers and update the state
+    setState(() {
+      _totalDistance = distance / 1000;
+    });
+  }
+}
 
 
   Future<void> fetchStaffDetails() async {
@@ -261,6 +276,8 @@ void addMarker(double latitude, double longitude) {
               _googleMapView(),
               _currentAddress(),
               _trackButton(),
+              Text('Total Distance: ${_totalDistance.toStringAsFixed(2)} km'),
+
             ],
           ),
         ),
@@ -365,6 +382,10 @@ void addMarker(double latitude, double longitude) {
                 padding: const EdgeInsets.all(16.0),
                 child: TextButton(
                   onPressed: () async {
+                    final SharedPreferences prefs = await SharedPreferences.getInstance();
+                    await prefs.remove('staffCode');
+                    await prefs.remove('password');
+
                     Navigator.pushReplacementNamed(context, '/signIn');
                   },
                   child: const Row(
@@ -384,45 +405,69 @@ void addMarker(double latitude, double longitude) {
           ),
         ),
       ),
-      bottomNavigationBar: ConvexAppBar(
-        initialActiveIndex: 0,
-        height: 50,
-        backgroundColor: const Color.fromARGB(185, 28, 84, 129),
-        style: TabStyle.flip,
-        items: const [
-          TabItem(icon: Icons.home_outlined, title: 'Home'),
-          TabItem(icon: Icons.person_outline, title: 'Profile'),
-          TabItem(icon: Icons.auto_graph_outlined, title: 'Records'),
-          TabItem(icon: Icons.settings_outlined, title: 'Settings')
-        ],
-        onTap: (int index) {
-          // Navigate to the corresponding page based on the selected index
-          switch (index) {
-            case 0:
-              Navigator.pushNamed(context, '/home');
-              break;
-            case 1:
-              Navigator.pushNamed(context, '/profile', arguments: {
-                'staffCode': staffCode,
-                'password': password,
-              });
-              break;
-            case 2:
-              Navigator.pushNamed(context, '/records', arguments: {
-                'staffCode': staffCode,
-                'password': password,
-              });
-              break;
-            case 3:
-              Navigator.pushNamed(context, '/settings');
-              break;
-            default:
-              break;
-          }
-        },
-      ),
+          bottomNavigationBar: ConvexAppBar(
+            initialActiveIndex: _selectedIndex,
+            height: 50,
+            backgroundColor: const Color.fromARGB(185, 28, 84, 129),
+            style: TabStyle.flip,
+            items: const [
+              TabItem(icon: Icons.home_outlined, title: 'Home'),
+              TabItem(icon: Icons.person_outline, title: 'Profile'),
+              TabItem(icon: Icons.auto_graph_outlined, title: 'Records'),
+              TabItem(icon: Icons.settings_outlined, title: 'Settings')
+            ],
+            onTap: (int index) {
+              setState(() {
+                _selectedIndex = index; // Update the selected index
+              });   
+              switch (index) {
+                case 0:
+                  Navigator.pushNamed(context, '/home');
+                  break;
+                case 1:
+                  Navigator.pushNamed(context, '/profile', arguments: {
+                    'staffCode': staffCode,
+                    'password': password,
+                  });
+                  break;
+                case 2:
+                  Navigator.pushNamed(context, '/records', arguments: {
+                    'staffCode': staffCode,
+                    'password': password,
+                  });
+                  break;
+                case 3:
+                  Navigator.pushNamed(context, '/settings');
+                  break;
+              }
+            },
+          ),
+
+
     );
   }
+
+  void _startLocationTracking() {
+  if (staffCode.isNotEmpty && password.isNotEmpty) {
+    if (_timer == null || !_timer!.isActive) {
+      _startTimer();
+      setState(() {
+        isLocationTrackingEnabled = true;
+      });
+    }
+  } else {
+    print('Staff code or password is empty. Cannot start location tracking.');
+  }
+}
+
+  void _stopLocationTracking() {
+    _timer?.cancel();
+    _timer = null;
+    setState(() {
+      isLocationTrackingEnabled = false;
+    });
+  }
+
 
 Widget _googleMapView() {
     return Card(
@@ -493,4 +538,34 @@ Widget _googleMapView() {
       ),
     );
   }
+
+    Future<void> sendTrackingDataToServer(List<Map<String, double>> route, String locationName, String staffCode) async {
+    try {
+      final currentTime = DateTime.now().toIso8601String();
+
+      final url = Uri.parse('https://www.wmps.in/staff/gps/location/records.php');
+      final response = await http.post(
+        url,
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'route': route,
+          'location_name': locationName,
+          'staff_code': staffCode,
+          'datetime': currentTime,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('Tracking data sent successfully!');
+      } else {
+        print('Failed to send tracking data. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error sending tracking data: $e');
+    }
+  }
+
+  
 }
