@@ -38,12 +38,14 @@ class _HomePageState extends State<HomePage> {
   List<LatLng> route = []; // Store the user's location history
   int _selectedIndex = 0;
   double _totalDistance = 0.0; 
+
+
   @override
   void initState() {
     super.initState();
     // _requestLocationPermission();
     if (staffCode.isNotEmpty && password.isNotEmpty ) {
-       _startLocationTracking();
+       _checkLocationPermission();
     }   
   }
 
@@ -76,18 +78,40 @@ class _HomePageState extends State<HomePage> {
   }
 
 
-  Future<void> _requestLocationPermission() async {
-    final status = await Permission.location.request();
 
-    if (status == PermissionStatus.granted) {
-      _getCurrentLocation();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location permission denied')),
-      );
-      _showPermissionRequestDialog();
+    Future<void> _checkLocationPermission() async {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final bool? hasPermission = prefs.getBool('locationPermission');
+
+      if (hasPermission == null || !hasPermission) {
+        // Location permission has not been granted yet, request permission
+        _requestLocationPermission();
+      } else {
+        // Location permission has been granted, get current location
+        _getCurrentLocation();
+      }
     }
-  }
+
+    Future<void> _requestLocationPermission() async {
+      final status = await Permission.location.request();
+
+      if (status == PermissionStatus.granted) {
+        // Permission granted, save permission status and get current location
+        _savePermissionStatus(true);
+        _getCurrentLocation();
+      } else {
+        // Permission denied, save permission status
+        _savePermissionStatus(false);
+        // Show permission request dialog
+        _showPermissionRequestDialog();
+      }
+    }
+
+    void _savePermissionStatus(bool hasPermission) async {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('locationPermission', hasPermission);
+    }
+
 
   void _showPermissionRequestDialog() {
     showDialog(
@@ -104,7 +128,7 @@ class _HomePageState extends State<HomePage> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _getCurrentLocation();
+                _requestLocationPermission(); // Request permission again
               },
               child: const Text("Grant"),
             ),
@@ -114,61 +138,61 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _getCurrentLocation() async {
-    try {
-      Position position = await Geolocator.getCurrentPosition();
-      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+void _getCurrentLocation() async {
+  try {
+    Position position = await Geolocator.getCurrentPosition();
+    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
 
-      if (placemarks.isNotEmpty) {
-        Placemark placemark = placemarks.first;
-        String street = placemark.thoroughfare ?? placemark.street ?? "Unnamed Road";
-        String city = placemark.locality ?? placemark.subLocality ?? placemark.administrativeArea ?? "Unknown";
-        String country = placemark.country ?? "Unknown";
+    if (placemarks.isNotEmpty) {
+      Placemark placemark = placemarks.first;
+      String street = placemark.thoroughfare ?? placemark.street ?? "Unnamed Road";
+      String city = placemark.locality ?? placemark.subLocality ?? placemark.administrativeArea ?? "Unknown";
+      String country = placemark.country ?? "Unknown";
 
-        setState(() {
-          if (origin.latitude == 0.0 && origin.longitude == 0.0) {
-            origin = LatLng(position.latitude, position.longitude);
-          }
-          destination = LatLng(position.latitude, position.longitude);
-          currentAddress = '$street, $city, $country';
-
-          route.add(LatLng(position.latitude, position.longitude)); // Add current location to the route
-        });
-
-        _moveToCurrentLocation();
-        _updatePolyline(); // Draw polyline with updated route
-        _calculateDistance(); // Calculate distance after updating route
-        // Add marker for the current location
-        addMarker(position.latitude, position.longitude);
-        // Convert route to the required format
-        List<Map<String, double>> routeData = route.map((latLng) => {
-          'latitude': latLng.latitude,
-          'longitude': latLng.longitude,
-        }).toList();
-
-        // Send tracking data to server
-        sendTrackingDataToServer(routeData, currentAddress, staffCode);
-        print(routeData);
-        } else {
-        setState(() {
+      setState(() {
+        if (origin.latitude == 0.0 && origin.longitude == 0.0) {
           origin = LatLng(position.latitude, position.longitude);
-          destination = origin;
-          currentAddress = "Unknown";
-        });
+        }
+        destination = LatLng(position.latitude, position.longitude);
+        currentAddress = '$street, $city, $country';
 
-        _moveToCurrentLocation();
-      }
-    } catch (error) {
-      if (kDebugMode) {
-        print('Error getting current location: $error');
-      }
-      if (!_isDisposed) {
-        setState(() {
-          currentAddress = "Error fetching location";
-        });
-      }
+        route.add(LatLng(position.latitude, position.longitude)); // Add current location to the route
+      });
+
+      _moveToCurrentLocation();
+      _updatePolyline(); // Draw polyline with updated route
+      _calculateDistance(); // Calculate distance after updating route
+      // Add marker for the current location
+      addMarker(position.latitude, position.longitude);
+      // Convert route to the required format
+      List<Map<String, double>> routeData = route.map((latLng) => {
+        'latitude': latLng.latitude,
+        'longitude': latLng.longitude,
+      }).toList();
+
+      // Send tracking data to server
+      sendTrackingDataToServer(route, currentAddress, staffCode);
+      print(routeData);
+    } else {
+      setState(() {
+        origin = LatLng(position.latitude, position.longitude);
+        destination = origin;
+        currentAddress = "Unknown";
+      });
+
+      _moveToCurrentLocation();
+    }
+  } catch (error) {
+    if (kDebugMode) {
+      print('Error getting current location: $error');
+    }
+    if (!_isDisposed) {
+      setState(() {
+        currentAddress = "Error fetching location";
+      });
     }
   }
+}
 
 
   void _updatePolyline() {
@@ -539,33 +563,36 @@ Widget _googleMapView() {
     );
   }
 
-    Future<void> sendTrackingDataToServer(List<Map<String, double>> route, String locationName, String staffCode) async {
-    try {
-      final currentTime = DateTime.now().toIso8601String();
+Future<void> sendTrackingDataToServer(List<LatLng> route, String locationName, String staffCode) async {
+  try {
+    final currentTime = DateTime.now().toIso8601String();
 
-      final url = Uri.parse('https://www.wmps.in/staff/gps/location/records.php');
-      final response = await http.post(
-        url,
-        headers: <String, String>{
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(<String, dynamic>{
-          'route': route,
-          'location_name': locationName,
-          'staff_code': staffCode,
-          'datetime': currentTime,
-        }),
-      );
+    final url = Uri.parse('https://www.wmps.in/staff/gps/location/records.php');
+    final response = await http.post(
+      url,
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(<String, dynamic>{
+        'route': route.map((latLng) => {
+          'latitude': latLng.latitude,
+          'longitude': latLng.longitude,
+        }).toList(),
+        'location_name': locationName,
+        'staff_code': staffCode,
+        'datetime': currentTime,
+      }),
+    );
 
-      if (response.statusCode == 200) {
-        print('Tracking data sent successfully!');
-      } else {
-        print('Failed to send tracking data. Status code: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error sending tracking data: $e');
+    if (response.statusCode == 200) {
+      print('Tracking data sent successfully!');
+    } else {
+      print('Failed to send tracking data. Status code: ${response.statusCode}');
     }
+  } catch (e) {
+    print('Error sending tracking data: $e');
   }
+}
 
   
 }

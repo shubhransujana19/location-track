@@ -1,113 +1,99 @@
-import 'package:convex_bottom_bar/convex_bottom_bar.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 
 class RecordPage extends StatefulWidget {
-  const RecordPage({super.key});
+  const RecordPage({Key? key}) : super(key: key);
 
   @override
   State<RecordPage> createState() => _RecordPageState();
 }
 
 class _RecordPageState extends State<RecordPage> {
-  int _selectedIndex = 2;
-
+  List<Map<String, dynamic>> records = [];
   String staffCode = '';
   String password = '';
-    @override
-    void didChangeDependencies() {
-      super.didChangeDependencies();
-      final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-      staffCode = args['staffCode'] ?? '';
-      password = args['password'] ?? '';
-      // fetchStaffDetails();
-    }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    staffCode = args['staffCode'] ?? '';
+    password = args['password'] ?? '';
+    fetchRecords();
+  }
+
+  Future<void> fetchRecords() async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://www.wmps.in/staff/gps/location/record-data.php'),
+        body: jsonEncode({'staffCode': staffCode}),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success']) {
+          setState(() {
+            records = List<Map<String, dynamic>>.from(responseData['records']);
+          });
+        } else {
+          print('No records found: ${responseData['message']}');
+        }
+      } else {
+        print('Failed to fetch records. Status code: ${response.statusCode}');
+      }
+    } catch (error) {
+      print('Error fetching records: $error');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return  Scaffold(
-            backgroundColor: Colors.grey[200], // Subtle background
-            appBar: AppBar(
-              backgroundColor: Color.fromARGB(200, 20, 75, 121),
-              title: const Text('All Track Records',
-              style: TextStyle(
-                color: Colors.white,
-              ),
-              ),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  setState(() {
-                    _selectedIndex = 0; // Update the selected index to the Home page
-                  });
-                },
-              ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Track Records'),
+      ),
+      body: ListView.builder(
+        itemCount: records.length,
+        itemBuilder: (context, index) {
+          final record = records[index];
+          final List<dynamic> routeData = jsonDecode(record['trackingPath']);
+          final List<LatLng> routePoints = routeData.map((data) => LatLng(data['latitude'], data['longitude'])).toList();
+          final polyline = Polyline(
+            polylineId: PolylineId('route_$index'),
+            points: routePoints,
+            color: Colors.blue,
+            width: 3,
+          );
 
-            ),
-            body: const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Select Date :')
-                    ],
+          final totalDistance = record['totalDistance'] ?? 0.0;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text('Date: ${record['currentDateAndTime']}'),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text('Total Distance Traveled: ${totalDistance.toStringAsFixed(2)} km'),
+              ),
+              SizedBox(
+                height: 200,
+                child: GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: routePoints.isNotEmpty ? routePoints.first : LatLng(0, 0),
+                    zoom: 15,
                   ),
-                )
+                  polylines: {polyline},
                 ),
-                  bottomNavigationBar: ConvexAppBar(
-                  initialActiveIndex: _selectedIndex,
-                  height: 50,
-                  backgroundColor: const Color.fromARGB(185, 28, 84, 129),
-                  style: TabStyle.flip,
-                  items: const [
-                    TabItem(icon: Icons.home_outlined, title: 'Home'),
-                    TabItem(icon: Icons.person_outline, title: 'Profile'),
-                    TabItem(icon: Icons.auto_graph_outlined, title: 'Records'),
-                    TabItem(icon: Icons.settings_outlined, title: 'Settings')
-                  ],
-                  onTap: (int index) {
-                    setState(() {
-                      _selectedIndex = index; // Update the selected index
-                    });
-
-                    // Navigate to the corresponding page based on the selected index
-                    switch (index) {
-                      case 0:
-                        Navigator.pushNamed(context, '/home',
-                        arguments: {
-                          'staffCode': staffCode,
-                          'password': password,
-                      });
-                        break;
-                      case 1:
-                        Navigator.pushNamed(context, '/profile', 
-                        arguments: {
-                          'staffCode': staffCode,
-                          'password': password,
-                        });
-                        break;
-                      case 2:
-                        Navigator.pushNamed(context, '/records',
-                          arguments: {
-                          'staffCode': staffCode,
-                          'password': password,
-                        });       
-                        break;
-                      case 3:
-                        Navigator.pushNamed(context, '/settings',
-                          arguments: {
-                          'staffCode': staffCode,
-                          'password': password,
-                        });       
-                        break;
-                      default:
-                        break;
-                    }
-                  },
-                ),
-
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

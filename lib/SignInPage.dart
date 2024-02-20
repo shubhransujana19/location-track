@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({Key? key}) : super(key: key);
@@ -15,6 +16,7 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController _staffCodeController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordHidden = true;
+  final Connectivity _connectivity = Connectivity();
 
   @override
   void initState() {
@@ -117,6 +119,22 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 
+  Future<void> _loginIfConnected(BuildContext context) async {
+    final ConnectivityResult connectivityResult = await _connectivity.checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      // Device is not connected to the internet
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No internet connection. Please check your connection and try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } else {
+      // Device is connected, proceed with login
+      _login(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -200,7 +218,7 @@ class _SignInPageState extends State<SignInPage> {
       padding: const EdgeInsets.symmetric(vertical: 25.0),
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () => _login(context),
+        onPressed: () => _loginIfConnected(context),
         style: ElevatedButton.styleFrom(
           elevation: 5.0, backgroundColor: Colors.white,
           padding: const EdgeInsets.all(15.0),
