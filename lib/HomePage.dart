@@ -57,7 +57,7 @@ class _HomePageState extends State<HomePage> {
       staffCode = args['staffCode'];
       password = args['password'];
       fetchStaffDetails();
-      _startTimer();
+      // _startTimer();
     });
     _selectedIndex = 0;
   }
@@ -528,7 +528,7 @@ Widget _googleMapView() {
   
   Widget _trackButton() {
     return Padding(
-      padding: EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16.0),
       child: ElevatedButton(
         onPressed: () async {
           final service = FlutterBackgroundService();
