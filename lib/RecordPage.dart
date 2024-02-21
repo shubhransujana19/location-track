@@ -48,11 +48,23 @@ class _RecordPageState extends State<RecordPage> {
     }
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Track Records'),
+        title: const Text(
+          'Track Records',
+          style: TextStyle(color: Colors.blue, fontSize: 18.0),
+        ),
+        backgroundColor: Colors.grey[200],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: () {
+              // Handle filter menu or dialog
+            },
+          ),
+        ],
       ),
       body: ListView.builder(
         itemCount: records.length,
@@ -67,33 +79,56 @@ class _RecordPageState extends State<RecordPage> {
             width: 3,
           );
 
-          final totalDistance = record['totalDistance'] ?? 0.0;
+          final totalDistance = double.tryParse(record['distance'] ?? '0.0') ?? 0.0;
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text('Date: ${record['currentDateAndTime']}'),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text('Total Distance Traveled: ${totalDistance.toStringAsFixed(2)} km'),
-              ),
-              SizedBox(
-                height: 200,
-                child: GoogleMap(
-                  initialCameraPosition: CameraPosition(
-                    target: routePoints.isNotEmpty ? routePoints.first : LatLng(0, 0),
-                    zoom: 15,
+          return Card(
+            elevation: 2.0, // Add subtle shadow effect
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Date: ${record['currentDateAndTime']}',
+                        style: const TextStyle(
+                          fontSize: 16.0,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        '${totalDistance.toStringAsFixed(2)} km',
+                        style: const TextStyle(
+                          fontSize: 14.0,
+                          color: Color.fromARGB(255, 117, 117, 117),
+                        ),
+                      ),
+                    ],
                   ),
-                  polylines: {polyline},
-                ),
+                  const SizedBox(height: 8.0), // Spacing between elements
+                  SizedBox(
+                    height: 200.0,
+                    child: GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: routePoints.isNotEmpty ? routePoints.first : LatLng(0, 0),
+                        zoom: 15,
+                      ),
+                      polylines: {polyline},
+                      mapType: MapType.normal,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           );
         },
       ),
     );
   }
-}
+  
+  }

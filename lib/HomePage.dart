@@ -581,6 +581,7 @@ Future<void> sendTrackingDataToServer(List<LatLng> route, String locationName, S
         'location_name': locationName,
         'staff_code': staffCode,
         'datetime': currentTime,
+        'total_distance': _totalDistance,
       }),
     );
 
