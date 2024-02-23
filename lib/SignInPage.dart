@@ -44,81 +44,92 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 
-  Future<void> _login(BuildContext context) async {
-    final String staffCode = _staffCodeController.text.trim();
-    final String password = _passwordController.text.trim();
+Future<void> _login(BuildContext context) async {
+  final String staffCode = _staffCodeController.text.trim();
+  final String password = _passwordController.text.trim();
 
-    if (staffCode.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Staff code and password cannot be empty'),
-          backgroundColor: Colors.red,
+  if (staffCode.isEmpty || password.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Staff code and password cannot be empty'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 20),
+            Text('Logging in...'),
+            SizedBox(height: 20),
+            Image.asset(
+              'assets/images/logo.png', // Adjust the path to your app logo
+              height: 50, // Adjust the height as needed
+            ),
+          ],
         ),
       );
-      return;
-    }
+    },
+  );
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      },
+  final Uri url = Uri.parse('https://www.wmps.in/staff/gps/location.php');
+  final Map<String, String> requestBody = {'staffCode': staffCode, 'password': password};
+
+  try {
+    final http.Response response = await http.post(
+      url,
+      body: jsonEncode(requestBody),
+      headers: {'Content-Type': 'application/json'},
     );
 
-    final Uri url = Uri.parse('https://www.wmps.in/staff/gps/location.php');
-    final Map<String, String> requestBody = {'staffCode': staffCode, 'password': password};
+    Navigator.pop(context); // Close loading indicator
 
-    try {
-      final http.Response response = await http.post(
-        url,
-        body: jsonEncode(requestBody),
-        headers: {'Content-Type': 'application/json'},
-      );
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+      if (responseData.containsKey('success') && responseData['success']) {
+        // Store credentials locally
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setString('staffCode', staffCode);
+        prefs.setString('password', password);
 
-      Navigator.pop(context); // Close loading indicator
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-        if (responseData.containsKey('success') && responseData['success']) {
-          // Store credentials locally
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          prefs.setString('staffCode', staffCode);
-          prefs.setString('password', password);
-
-          Navigator.pushReplacementNamed(
-            context, '/home',
-            arguments: {'staffCode': staffCode, 'password': password},
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(responseData['message'] ?? 'Login failed'),
-              backgroundColor: const Color.fromARGB(164, 244, 67, 54),
-            ),
-          );
-        }
+        Navigator.pushReplacementNamed(
+          context, '/home',
+          arguments: {'staffCode': staffCode, 'password': password},
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('HTTP Error: ${response.statusCode}'),
+            content: Text(responseData['message'] ?? 'Login failed'),
             backgroundColor: const Color.fromARGB(164, 244, 67, 54),
           ),
         );
       }
-    } catch (error) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error during login: $error'),
-          backgroundColor: const Color.fromARGB(178, 212, 27, 14),
+          content: Text('HTTP Error: ${response.statusCode}'),
+          backgroundColor: const Color.fromARGB(164, 244, 67, 54),
         ),
       );
-      print('Error during login: $error');
     }
+  } catch (error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error during login: $error'),
+        backgroundColor: const Color.fromARGB(178, 212, 27, 14),
+      ),
+    );
+    print('Error during login: $error');
   }
-
+}
   Future<void> _loginIfConnected(BuildContext context) async {
     final ConnectivityResult connectivityResult = await _connectivity.checkConnectivity();
     if (connectivityResult == ConnectivityResult.none) {

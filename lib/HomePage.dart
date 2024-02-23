@@ -9,8 +9,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
-import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share/share.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -36,7 +36,6 @@ class _HomePageState extends State<HomePage> {
   String photoPath = '';
   String staffPhoto = '';
   List<LatLng> route = []; // Store the user's location history
-  int _selectedIndex = 0;
   double _totalDistance = 0.0; 
 
 
@@ -59,7 +58,6 @@ class _HomePageState extends State<HomePage> {
       fetchStaffDetails();
       // _startTimer();
     });
-    _selectedIndex = 0;
   }
 
   @override
@@ -79,64 +77,73 @@ class _HomePageState extends State<HomePage> {
 
 
 
-    Future<void> _checkLocationPermission() async {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      final bool? hasPermission = prefs.getBool('locationPermission');
+Future<void> _checkLocationPermission() async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  final bool? hasPermission = prefs.getBool('locationPermission');
 
-      if (hasPermission == null || !hasPermission) {
-        // Location permission has not been granted yet, request permission
-        _requestLocationPermission();
-      } else {
-        // Location permission has been granted, get current location
-        _getCurrentLocation();
-      }
+  if (hasPermission == null || !hasPermission) {
+    // Location permission has not been granted yet, request permission
+    await _requestLocationPermission();
+  } else {
+    // Location permission has been granted or denied
+    final status = await Permission.location.status;
+    if (status == PermissionStatus.denied || status == PermissionStatus.permanentlyDenied) {
+      // Location permission has been denied, show permission request dialog
+      _showPermissionRequestDialog();
+    } else {
+      // Location permission has been granted, get current location
+      _getCurrentLocation();
     }
-
-    Future<void> _requestLocationPermission() async {
-      final status = await Permission.location.request();
-
-      if (status == PermissionStatus.granted) {
-        // Permission granted, save permission status and get current location
-        _savePermissionStatus(true);
-        _getCurrentLocation();
-      } else {
-        // Permission denied, save permission status
-        _savePermissionStatus(false);
-        // Show permission request dialog
-        _showPermissionRequestDialog();
-      }
-    }
-
-    void _savePermissionStatus(bool hasPermission) async {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('locationPermission', hasPermission);
-    }
-
-
-  void _showPermissionRequestDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Location Permission Required"),
-          content: const Text("This app requires location permission to function."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _requestLocationPermission(); // Request permission again
-              },
-              child: const Text("Grant"),
-            ),
-          ],
-        );
-      },
-    );
   }
+}
+
+Future<void> _requestLocationPermission() async {
+  final status = await Permission.location.request();
+
+  if (status == PermissionStatus.granted) {
+    // Permission granted, save permission status and get current location
+    _savePermissionStatus(true);
+    _getCurrentLocation();
+  } else if (status == PermissionStatus.denied || status == PermissionStatus.permanentlyDenied) {
+    // Permission denied, save permission status
+    // _savePermissionStatus(false);
+    // Show permission request dialog
+    _showPermissionRequestDialog();
+  }
+}
+
+void _showPermissionRequestDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text("Location Permission Required"),
+        content: const Text(
+          "This app requires access to your device's location to function properly. Please grant the location permission in order to start tracking your location."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              // Open app settings for the user to manually enable location permission
+              await openAppSettings();
+            },
+            child: const Text("Go to Settings"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+  Future<void> _savePermissionStatus(bool hasPermission) async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('locationPermission', hasPermission);
+}
+
 
 void _getCurrentLocation() async {
   try {
@@ -220,7 +227,7 @@ void addMarker(double latitude, double longitude) {
   setState(() {
     markers.add(
       Marker(
-        markerId: MarkerId('current_location'), // Use a fixed marker ID for the current location
+        markerId: const MarkerId('current_location'), // Use a fixed marker ID for the current location
         position: LatLng(latitude, longitude), // Provide the position of the marker
         // You can customize the marker icon if needed
         icon: BitmapDescriptor.defaultMarker,
@@ -390,17 +397,50 @@ void addMarker(double latitude, double longitude) {
                   );
                 },
               ),
-              const ListTile(
-                leading: Icon(Icons.contact_support, color: Colors.blueAccent),
-                title: Text('Contact Us'),
+              ListTile(
+                leading: const Icon(Icons.auto_graph, color: Colors.blueAccent),
+                title: const Text('Track Records'),
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/records',
+                    arguments: {
+                      'staffCode': staffCode,
+                      'password': password,
+                    },
+                  );
+                },
+              ),
+
+             ListTile(
+                leading: const Icon(Icons.contact_support, color: Colors.blueAccent),
+                title: const Text('Contact Us'),
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/contact',
+                    arguments: {
+                      'staffCode': staffCode,
+                      'password': password,
+                    },
+                  );
+                },
+
               ),
               const ListTile(
                 leading: Icon(Icons.settings, color: Colors.blueAccent),
                 title: Text('Settings'),
               ),
-              const ListTile(
-                leading: Icon(Icons.share, color: Colors.blueAccent),
-                title: Text('Share'),
+               ListTile(
+                leading: const Icon(Icons.share, color: Colors.blueAccent),
+                title: const Text('Share'),
+                onTap: (){
+                   // Implement share functionality here
+                     const String message = 'Check out this awesome app!';
+                     const String subject = 'App Recommendation';
+
+                    Share.share(message, subject: subject);
+                },
               ),
               Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -429,43 +469,6 @@ void addMarker(double latitude, double longitude) {
           ),
         ),
       ),
-          bottomNavigationBar: ConvexAppBar(
-            initialActiveIndex: _selectedIndex,
-            height: 50,
-            backgroundColor: const Color.fromARGB(185, 28, 84, 129),
-            style: TabStyle.flip,
-            items: const [
-              TabItem(icon: Icons.home_outlined, title: 'Home'),
-              TabItem(icon: Icons.person_outline, title: 'Profile'),
-              TabItem(icon: Icons.auto_graph_outlined, title: 'Records'),
-              TabItem(icon: Icons.settings_outlined, title: 'Settings')
-            ],
-            onTap: (int index) {
-              setState(() {
-                _selectedIndex = index; // Update the selected index
-              });   
-              switch (index) {
-                case 0:
-                  Navigator.pushNamed(context, '/home');
-                  break;
-                case 1:
-                  Navigator.pushNamed(context, '/profile', arguments: {
-                    'staffCode': staffCode,
-                    'password': password,
-                  });
-                  break;
-                case 2:
-                  Navigator.pushNamed(context, '/records', arguments: {
-                    'staffCode': staffCode,
-                    'password': password,
-                  });
-                  break;
-                case 3:
-                  Navigator.pushNamed(context, '/settings');
-                  break;
-              }
-            },
-          ),
 
 
     );
@@ -518,7 +521,7 @@ Widget _googleMapView() {
         width: double.infinity,
         height: 50,
         child: Text(
-          currentAddress.isEmpty ? "Fetching address..." : "Current Address: $currentAddress",
+          currentAddress.isEmpty ? "Start Tracking to fetch address..." : "Current Address: $currentAddress",
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 15, color: Colors.blue),
         ),

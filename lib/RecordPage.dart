@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class RecordPage extends StatefulWidget {
   const RecordPage({Key? key}) : super(key: key);
@@ -14,30 +14,36 @@ class _RecordPageState extends State<RecordPage> {
   List<Map<String, dynamic>> records = [];
   String staffCode = '';
   String password = '';
+  DateTime? selectedDate;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     staffCode = args['staffCode'] ?? '';
     password = args['password'] ?? '';
-    fetchRecords();
   }
 
-  Future<void> fetchRecords() async {
+  Future<void> fetchRecords(DateTime? date) async {
     try {
       final response = await http.post(
         Uri.parse('https://www.wmps.in/staff/gps/location/record-data.php'),
-        body: jsonEncode({'staffCode': staffCode}),
+        body: jsonEncode({'staffCode': staffCode, 'date': date?.toString()}),
       );
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         if (responseData['success']) {
           setState(() {
-            records = List<Map<String, dynamic>>.from(responseData['records']);
+            records =
+                List<Map<String, dynamic>>.from(responseData['records']);
           });
         } else {
+          // No records found, clear existing records
+          setState(() {
+            records = [];
+          });
           print('No records found: ${responseData['message']}');
         }
       } else {
@@ -48,7 +54,7 @@ class _RecordPageState extends State<RecordPage> {
     }
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -60,75 +66,100 @@ class _RecordPageState extends State<RecordPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              // Handle filter menu or dialog
+            onPressed: () async {
+              final DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(2015, 8),
+                lastDate: DateTime.now(),
+              );
+              if (picked != null && picked != selectedDate) {
+                setState(() {
+                  selectedDate = picked;
+                });
+                fetchRecords(selectedDate);
+              }
             },
           ),
         ],
       ),
-      body: ListView.builder(
-        itemCount: records.length,
-        itemBuilder: (context, index) {
-          final record = records[index];
-          final List<dynamic> routeData = jsonDecode(record['trackingPath']);
-          final List<LatLng> routePoints = routeData.map((data) => LatLng(data['latitude'], data['longitude'])).toList();
-          final polyline = Polyline(
-            polylineId: PolylineId('route_$index'),
-            points: routePoints,
-            color: Colors.blue,
-            width: 3,
-          );
+      body: records.isEmpty
+          ? Center(
+              child: Text('No records found'),
+            )
+          : ListView.builder(
+              itemCount: records.length,
+              itemBuilder: (context, index) {
+                final record = records[index];
+                final List<dynamic> routeData =
+                    jsonDecode(record['trackingPath']);
+                final List<LatLng> routePoints = routeData
+                    .map((data) =>
+                        LatLng(data['latitude'], data['longitude']))
+                    .toList();
+                final polyline = Polyline(
+                  polylineId: PolylineId('route_$index'),
+                  points: routePoints,
+                  color: Colors.blue,
+                  width: 3,
+                );
 
-          final totalDistance = double.tryParse(record['distance'] ?? '0.0') ?? 0.0;
+                final totalDistance =
+                    double.tryParse(record['distance'] ?? '0.0') ?? 0.0;
 
-          return Card(
-            elevation: 2.0, // Add subtle shadow effect
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Date: ${record['currentDateAndTime']}',
-                        style: const TextStyle(
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                return Card(
+                  elevation: 2.0, // Add subtle shadow effect
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0)),
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Date: ${record['currentDateAndTime']}',
+                              style: const TextStyle(
+                                fontSize: 16.0,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              '${totalDistance.toStringAsFixed(2)} km',
+                              style: const TextStyle(
+                                fontSize: 14.0,
+                                color: Color.fromARGB(255, 117, 117, 117),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      Text(
-                        '${totalDistance.toStringAsFixed(2)} km',
-                        style: const TextStyle(
-                          fontSize: 14.0,
-                          color: Color.fromARGB(255, 117, 117, 117),
+                        const SizedBox(
+                            height:
+                                8.0), // Spacing between elements
+                        SizedBox(
+                          height: 200.0,
+                          child: GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: routePoints.isNotEmpty
+                                  ? routePoints.first
+                                  : LatLng(0, 0),
+                              zoom: 15,
+                            ),
+                            polylines: {polyline},
+                            mapType: MapType.normal,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8.0), // Spacing between elements
-                  SizedBox(
-                    height: 200.0,
-                    child: GoogleMap(
-                      initialCameraPosition: CameraPosition(
-                        target: routePoints.isNotEmpty ? routePoints.first : LatLng(0, 0),
-                        zoom: 15,
-                      ),
-                      polylines: {polyline},
-                      mapType: MapType.normal,
+                      ],
                     ),
                   ),
-                ],
-              ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
-  
-  }
+}

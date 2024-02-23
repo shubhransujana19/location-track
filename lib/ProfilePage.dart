@@ -1,7 +1,7 @@
-import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -23,7 +23,6 @@ class _ProfilePageState extends State<ProfilePage> {
   String emailAddress = '';
   int salary = 0;
 
-  int  _selectedIndex = 1; // Update the selected index to the Home page
 
   @override
   void didChangeDependencies() {
@@ -32,8 +31,6 @@ class _ProfilePageState extends State<ProfilePage> {
     staffCode = args['staffCode'] ?? '';
     password = args['password'] ?? '';
     fetchStaffDetails();
-
-    _selectedIndex = 1;
   }
 
   // Fetches staff details from API
@@ -95,11 +92,8 @@ class _ProfilePageState extends State<ProfilePage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             // Pop all routes until reaching the home page
-          Navigator.of(context).popUntil(ModalRoute.withName('/home'));
-            // Navigator.of(context).pop();
-            // setState(() {
-            //   _selectedIndex = 0; // Update the selected index to the Home page
-            // });
+          // Navigator.of(context).popUntil(ModalRoute.withName('/home'));
+           Navigator.of(context).pop();
           },
         ),
       ),
@@ -241,54 +235,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
 
-      bottomNavigationBar: ConvexAppBar(
-        initialActiveIndex: _selectedIndex,
-        height: 50,
-        backgroundColor: const Color.fromARGB(185, 28, 84, 129),
-        style: TabStyle.flip,
-        items: const [
-          TabItem(icon: Icons.home_outlined, title: 'Home'),
-          TabItem(icon: Icons.person_outline, title: 'Profile'),
-          TabItem(icon: Icons.auto_graph_outlined, title: 'Records'),
-          TabItem(icon: Icons.settings_outlined, title: 'Settings')
-        ],
-        onTap: (int index) {
-          setState(() {
-            _selectedIndex = index; // Update the selected index
-          });
-
-          // Navigate to the corresponding page based on the selected index
-          switch (index) {
-            case 0:
-              Navigator.pushNamed(context, '/home',
-              arguments: {
-                'staffCode': staffCode,
-                'password': password,
-            });
-              break;
-            case 1:
-              Navigator.pushNamed(context, '/profile', 
-              arguments: {
-                'staffCode': staffCode,
-                'password': password,
-              });
-              break;
-            case 2:
-              Navigator.pushNamed(context, '/records',
-              arguments: {
-                'staffCode': staffCode,
-                'password': password,
-              });
-              break;
-            case 3:
-              Navigator.pushNamed(context, '/settings');
-              break;
-            default:
-              break;
-          }
-        },
-
-      ),
 
     );
   }

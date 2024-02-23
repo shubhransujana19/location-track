@@ -42,7 +42,7 @@ void onStart(ServiceInstance service) async {
   service.on('stopTracking').listen((event) {
     service.stopSelf();
   });
-  Timer.periodic(const Duration(seconds: 5), (timer) async {
+  Timer.periodic(const Duration(seconds: 10), (timer) async {
     if (service is AndroidServiceInstance) {
       if (await service.isForegroundService()) {
         service.setForegroundNotificationInfo(

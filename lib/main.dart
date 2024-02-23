@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:location/BankPage.dart';
+import 'package:location/ContactPage.dart';
 import 'package:location/DocumentPage.dart';
 import 'package:location/HomePage.dart';
 import 'package:location/ProfilePage.dart';
@@ -10,8 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async{
-    WidgetsFlutterBinding.ensureInitialized();
-    
+  WidgetsFlutterBinding.ensureInitialized(); 
   await Permission.notification.isDenied.then(
     (value) {
       if(value){
@@ -39,6 +39,8 @@ class MyApp extends StatelessWidget {
         '/bank' : (context) => const BankPage(),
         '/document' : (context) => const DocumentPage(),
         '/records' : (context) => const RecordPage(),
+        '/contact' : (context) => const ContactPage(),
+
       }
     );
   }
