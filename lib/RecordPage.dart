@@ -16,6 +16,8 @@ class _RecordPageState extends State<RecordPage> {
   String password = '';
   DateTime? selectedDate;
 
+  GoogleMapController? mapController;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -84,82 +86,60 @@ class _RecordPageState extends State<RecordPage> {
         ],
       ),
       body: records.isEmpty
-          ? Center(
+          ? const Center(
               child: Text('No records found'),
             )
-          : ListView.builder(
-              itemCount: records.length,
-              itemBuilder: (context, index) {
-                final record = records[index];
-                final List<dynamic> routeData =
-                    jsonDecode(record['trackingPath']);
-                final List<LatLng> routePoints = routeData
-                    .map((data) =>
-                        LatLng(data['latitude'], data['longitude']))
-                    .toList();
-                final polyline = Polyline(
-                  polylineId: PolylineId('route_$index'),
-                  points: routePoints,
-                  color: Colors.blue,
-                  width: 3,
-                );
-
-                final totalDistance =
-                    double.tryParse(record['distance'] ?? '0.0') ?? 0.0;
-
-                return Card(
-                  elevation: 2.0, // Add subtle shadow effect
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0)),
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 8.0),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Date: ${record['currentDateAndTime']}',
-                              style: const TextStyle(
-                                fontSize: 16.0,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            Text(
-                              '${totalDistance.toStringAsFixed(2)} km',
-                              style: const TextStyle(
-                                fontSize: 14.0,
-                                color: Color.fromARGB(255, 117, 117, 117),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(
-                            height:
-                                8.0), // Spacing between elements
-                        SizedBox(
-                          height: 200.0,
-                          child: GoogleMap(
-                            initialCameraPosition: CameraPosition(
-                              target: routePoints.isNotEmpty
-                                  ? routePoints.first
-                                  : LatLng(0, 0),
-                              zoom: 15,
-                            ),
-                            polylines: {polyline},
-                            mapType: MapType.normal,
-                          ),
-                        ),
-                      ],
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 200.0,
+                  child: GoogleMap(
+                    onMapCreated: (controller) {
+                      setState(() {
+                        mapController = controller;
+                      });
+                    },
+                    initialCameraPosition: const CameraPosition(
+                      target: LatLng(0, 0),
+                      zoom: 15,
                     ),
+                    markers: _buildMarkers(),
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 8.0),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: records.length,
+                    itemBuilder: (context, index) {
+                      final record = records[index];
+                      return ListTile(
+                        title: Text('Location ${index + 1}: ${record['location']}'),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
     );
+  }
+
+  Set<Marker> _buildMarkers() {
+    if (records.isNotEmpty && mapController != null) {
+      return records.map((record) {
+        final LatLng location = LatLng(
+          record['latitude'] as double,
+          record['longitude'] as double,
+        );
+        return Marker(
+          markerId: MarkerId(location.toString()),
+          position: location,
+          infoWindow: InfoWindow(
+            title: record['location'] as String,
+          ),
+        );
+      }).toSet();
+    }
+    return {};
   }
 }

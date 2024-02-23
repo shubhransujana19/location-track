@@ -11,6 +11,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share/share.dart';
+import 'package:location/back_services.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -331,13 +333,22 @@ void addMarker(double latitude, double longitude) {
                       bottom: 16.0,
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            backgroundImage: staffPhoto.isNotEmpty
-                                ? NetworkImage(staffPhoto)
-                                : const NetworkImage(
-                                    'https://i.guim.co.uk/img/media/97fc02c0ed01d16b8090846535695cb1daa4d084/0_150_2000_1199/master/2000.jpg?width=465&dpr=1&s=none'),
-                            foregroundColor: Colors.green,
-                            radius: 40.0,
+                          GestureDetector(
+                            onTap: () => Navigator.pushNamed(
+                              context, '/profile',
+                              arguments: {
+                                'staffCode' : staffCode,
+                                'password': password,
+                              }
+                            ),
+                            child: CircleAvatar(
+                              backgroundImage: staffPhoto.isNotEmpty
+                                  ? NetworkImage(staffPhoto)
+                                  : const NetworkImage(
+                                      'https://i.guim.co.uk/img/media/97fc02c0ed01d16b8090846535695cb1daa4d084/0_150_2000_1199/master/2000.jpg?width=465&dpr=1&s=none'),
+                              foregroundColor: Colors.green,
+                              radius: 40.0,
+                            ),
                           ),
                           const SizedBox(width: 9.0),
                           Text(staffName),
@@ -436,7 +447,7 @@ void addMarker(double latitude, double longitude) {
                 title: const Text('Share'),
                 onTap: (){
                    // Implement share functionality here
-                     const String message = 'Check out this awesome app!';
+                     const String message = 'Check out this awesome app! for location tracking ';
                      const String subject = 'App Recommendation';
 
                     Share.share(message, subject: subject);
@@ -529,42 +540,42 @@ Widget _googleMapView() {
     );
   }
   
-  Widget _trackButton() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ElevatedButton(
-        onPressed: () async {
-          final service = FlutterBackgroundService();
-          bool isRunning = await service.isRunning();
-          if (isRunning) {
-            service.invoke('stopTracking');
-          } else {
-            service.startService();
-          }
-          if (!isRunning) {
-            _startLocationTracking();
-          } else {
-            _stopLocationTracking();
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          primary: isLocationTrackingEnabled ? Colors.red : Colors.lightGreen[700],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+Widget _trackButton() {
+  return Padding(
+    padding: const EdgeInsets.all(16.0),
+    child: ElevatedButton(
+      onPressed: () async {
+        final service = FlutterBackgroundService();
+        bool isRunning = await service.isRunning();
+        if (isRunning) {
+          service.invoke('stopTracking');
+          _stopLocationTracking();
+        } else {
+          await initializeService(); // Initialize service when user starts tracking
+          service.startService();
+          _startLocationTracking();
+        }
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isLocationTrackingEnabled ? Colors.red : Colors.lightGreen[700],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15.0),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(isLocationTrackingEnabled ? Icons.stop : Icons.play_arrow),
-            const SizedBox(width: 5),
-            Text(isLocationTrackingEnabled ? 'Stop Tracking' : 'Start Tracking', style: const TextStyle(fontSize: 20.0)),
-          ],
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
       ),
-    );
-  }
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(isLocationTrackingEnabled ? Icons.stop : Icons.play_arrow),
+          const SizedBox(width: 5),
+          Text(isLocationTrackingEnabled ? 'Stop Tracking' : 'Start Tracking', style: const TextStyle(fontSize: 20.0)),
+        ],
+      ),
+    ),
+  );
+}
+
+
 
 Future<void> sendTrackingDataToServer(List<LatLng> route, String locationName, String staffCode) async {
   try {

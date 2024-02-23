@@ -60,8 +60,7 @@ class ContactPage extends StatelessWidget {
                 style: TextStyle(fontSize: 20.0),
               ),
               style: ElevatedButton.styleFrom(
-                primary: Colors.blue,
-                onPrimary: Colors.white,
+                foregroundColor: Colors.white, backgroundColor: Colors.blue,
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
               ),
             ),
@@ -74,8 +73,7 @@ class ContactPage extends StatelessWidget {
                 style: TextStyle(fontSize: 20.0),
               ),
               style: ElevatedButton.styleFrom(
-                primary: Colors.green,
-                onPrimary: Colors.white,
+                foregroundColor: Colors.white, backgroundColor: Colors.green,
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
               ),
             ),

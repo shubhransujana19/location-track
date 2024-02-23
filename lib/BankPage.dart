@@ -18,7 +18,6 @@ class _BankPageState extends State<BankPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Access context and arguments here
     final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     staffCode = args['staffCode'] ?? '';
     password = args['password'] ?? '';
@@ -36,11 +35,11 @@ class _BankPageState extends State<BankPage> {
         final responseData = jsonDecode(response.body);
         if (responseData != null && responseData['success']) {
           return {
-            'bankName': responseData['staffDetails']['bankname'] ?? 'Unknown Bank',
-            'ifscCode': responseData['staffDetails']['ifsc_code'] ?? '',
-            'accountNumber': responseData['staffDetails']['bankacc'] ?? '',
-            'accountHolderName': responseData['staffDetails']['staff_name'] ?? '',
-            'panCard': responseData['staffDetails']['pan'] ?? '',
+            'Bank Name': responseData['staffDetails']['bankname'] ?? 'Unknown Bank',
+            'IFSC Code': responseData['staffDetails']['ifsc_code'] ?? '',
+            'Account Number': responseData['staffDetails']['bankacc'] ?? '',
+            'Account Holder Name': responseData['staffDetails']['staff_name'] ?? '',
+            'PAN Card': responseData['staffDetails']['pan'] ?? '',
           };
         } else {
           throw Exception('Failed to fetch bank details');
@@ -55,167 +54,75 @@ class _BankPageState extends State<BankPage> {
 
   @override
   Widget build(BuildContext context) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          // Gradient background
-          backgroundColor: const Color.fromARGB(255, 65, 120, 165), // Change to your desired color
-          elevation: 0.0, // Remove default shadow
-          title: const Text(
-            'My Bank Account',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22.0,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop(),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.indigo,
+        title: const Text(
+          'My Bank Account',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18.0,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        body: FutureBuilder<Map<String, String>>(
-          future: _bankDetailsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            } else {
-              final bankDetails = snapshot.data!;
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch cards
-                  children: [
-                    _buildDetailCard(
-                      const Color.fromARGB(255, 154, 108, 192), // Light blue background
-                      TextStyle(
-                        color: Colors.blue[800],
-                        fontWeight: FontWeight.bold,
-                      ),
-                      const TextStyle(fontSize: 18.0),
-                      'Bank Name:',
-                      bankDetails['bankName']!,
-                      'bankName',
-                    ),
-                    _buildDetailCard(
-                      const Color.fromARGB(255, 135, 204, 135), // Light green background
-                      TextStyle(
-                        color: Colors.green[800],
-                        fontWeight: FontWeight.bold,
-                      ),
-                      const TextStyle(fontSize: 18.0),
-                      'IFSC Code:',
-                      bankDetails['ifscCode']!,
-                      'ifscCode',
-                    ),
-                    _buildDetailCard(
-                      const Color.fromARGB(255, 255, 183, 77), // Light orange background
-                      TextStyle(
-                        color: Colors.orange[800],
-                        fontWeight: FontWeight.bold,
-                      ),
-                      const TextStyle(fontSize: 18.0),
-                      'Account Number:',
-                      bankDetails['accountNumber']!,
-                      'accountNumber',
-                    ),
-                    _buildDetailCard(
-                      const Color.fromARGB(255, 255, 138, 128), // Light red background
-                      TextStyle(
-                        color: Colors.red[800],
-                        fontWeight: FontWeight.bold,
-                      ),
-                      const TextStyle(fontSize: 18.0),
-                      'Account Holder Name:',
-                      bankDetails['accountHolderName']!,
-                      'accountHolderName',
-                    ),
-                    _buildDetailCard(
-                      const Color.fromARGB(255, 144, 202, 249), // Light blue background
-                      TextStyle(
-                        color: Colors.blue[800],
-                        fontWeight: FontWeight.bold,
-                      ),
-                      const TextStyle(fontSize: 18.0),
-                      'PAN Card:',
-                      bankDetails['panCard']!,
-                      'panCard',
-                    ),
-                    // Add more detail cards here
-                  ],
-                ),
-              );
-            }
-          },
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white,),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-      );
-    
+      ),
+      body: FutureBuilder<Map<String, String>>(
+        future: _bankDetailsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            final bankDetails = snapshot.data!;
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: bankDetails.entries.map((entry) {
+                  return _buildDetailCard(entry.key, entry.value);
+                }).toList(),
+              ),
+            );
+          }
+        },
+      ),
+    );
   }
 
-  Widget _buildDetailCard(
-    Color cardColor,
-    TextStyle labelStyle,
-    TextStyle valueStyle,
-    String label,
-    String value,
-    String s,
-  ) {
+  Widget _buildDetailCard(String label, String value) {
     return Card(
-      color: cardColor,
+      elevation: 4,
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      color: Colors.white70,
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Icon(Icons.lock, color: Colors.grey),
-                Text(
-                  label,
-                  style: labelStyle,
-                ),
-              ],
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.indigo,
+              ),
             ),
-            const Divider(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    _isSensitiveData(value) ? _getMaskedValue(value) : value,
-                    style: valueStyle,
-                  ),
-                ),
-                if (_isSensitiveData(value)) ... {
-                  IconButton(
-                    icon: const Icon(Icons.visibility_off),
-                    onPressed: () {
-                      // Implement authentication and reveal full data securely
-                    },
-                  ),
-                },
-              ],
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black,
+              ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  bool _isSensitiveData(String value) {
-    return value.contains('pan') || value.contains('account');
-  }
-
-  String _getMaskedValue(String value) {
-    if (value.contains('pan')) {
-      return "**** **** **** ${value.substring(12)}";
-    } else if (value.contains('account')) {
-      return "${value.substring(0, 3)}********${value.substring(value.length - 3)}";
-    } else {
-      return value;
-    }
   }
 }

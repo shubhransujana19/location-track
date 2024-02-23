@@ -6,7 +6,6 @@ import 'package:location/HomePage.dart';
 import 'package:location/ProfilePage.dart';
 import 'package:location/RecordPage.dart';
 import 'package:location/SignInPage.dart';
-import 'package:location/back_services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,7 +17,7 @@ void main() async{
         Permission.notification.request();
       }
   });
-  await initializeService();
+  // await initializeService();
   await SharedPreferences.getInstance();
   
   runApp(const MyApp());
