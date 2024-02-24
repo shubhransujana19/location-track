@@ -181,7 +181,9 @@ void _getCurrentLocation() async {
 
       // Send tracking data to server
       sendTrackingDataToServer(route, currentAddress, staffCode);
-      print(routeData);
+      if (kDebugMode) {
+        print(routeData);
+      }
     } else {
       setState(() {
         origin = LatLng(position.latitude, position.longitude);
