@@ -19,55 +19,65 @@ class _RecordPageState extends State<RecordPage> {
   LatLng initialCameraPosition = LatLng(0, 0);
   bool isLoading = false;
 
+@override
+void initState() {
+  super.initState();
+  selectedDate = DateTime.now();
+  fetchRecords(selectedDate); // Fetch records for today's date
+}
+
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     staffCode = args['staffCode'] ?? '';
     password = args['password'] ?? '';
-    // Fetch records when the page first loads
-    fetchRecords(DateTime.now());
+
+    // Fetch records for the selected date or today's date
+    fetchRecords(selectedDate);
   }
 
-  Future<void> fetchRecords(DateTime? date) async {
-    setState(() {
-      isLoading = true;
-    });
 
-    try {
-      final response = await http.post(
-        Uri.parse('https://www.wmps.in/staff/gps/location/record-data.php'),
-        body: jsonEncode({'staffCode': staffCode, 'date': date?.toString()}),
-      );
+Future<void> fetchRecords(DateTime? date) async {
+  setState(() {
+    isLoading = true;
+  });
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData['success']) {
-          setState(() {
-            records = List<Map<String, dynamic>>.from(responseData['records']);
-            if (records.isNotEmpty) {
-              final List<dynamic> routeData = jsonDecode(records[0]['trackingPath']);
-              final LatLng firstPoint = LatLng(routeData[0]['latitude'], routeData[0]['longitude']);
-              initialCameraPosition = firstPoint;
-            }
-          });
-        } else {
-          setState(() {
-            records = [];
-          });
-          print('No records found: ${responseData['message']}');
-        }
+  try {
+    final response = await http.post(
+      Uri.parse('https://www.wmps.in/staff/gps/location/record-data.php'),
+      body: jsonEncode({'staffCode': staffCode, 'date': date?.toString()}),
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      if (responseData['success']) {
+        setState(() {
+          records = List<Map<String, dynamic>>.from(responseData['records']);
+          if (records.isNotEmpty) {
+            final List<dynamic> routeData = jsonDecode(records[0]['trackingPath']);
+            final LatLng firstPoint = LatLng(routeData[0]['latitude'], routeData[0]['longitude']);
+            initialCameraPosition = firstPoint;
+          }
+        });
       } else {
-        print('Failed to fetch records. Status code: ${response.statusCode}');
+        setState(() {
+          records = [];
+        });
+        print('No records found: ${responseData['message']}');
       }
-    } catch (error) {
-      print('Error fetching records: $error');
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
+    } else {
+      print('Failed to fetch records. Status code: ${response.statusCode}');
     }
+  } catch (error) {
+    print('Error fetching records: $error');
+  } finally {
+    setState(() {
+      isLoading = false;
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {

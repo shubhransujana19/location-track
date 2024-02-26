@@ -66,10 +66,10 @@ Future<void> _login(BuildContext context) async {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 20),
-            Text('Logging in...'),
-            SizedBox(height: 20),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            const Text('Logging in...'),
+            const SizedBox(height: 20),
             Image.asset(
               'assets/images/logo.png', // Adjust the path to your app logo
               height: 50, // Adjust the height as needed
@@ -122,9 +122,9 @@ Future<void> _login(BuildContext context) async {
     }
   } catch (error) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error during login: $error'),
-        backgroundColor: const Color.fromARGB(178, 212, 27, 14),
+      const SnackBar(
+        content: Text('Error during login. Please check your connection and try again.'),
+        backgroundColor: Color.fromARGB(178, 212, 27, 14),
       ),
     );
     print('Error during login: $error');
@@ -135,7 +135,7 @@ Future<void> _login(BuildContext context) async {
     if (connectivityResult == ConnectivityResult.none) {
       // Device is not connected to the internet
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('No internet connection. Please check your connection and try again.'),
           backgroundColor: Colors.red,
         ),
